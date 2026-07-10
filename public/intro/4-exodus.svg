@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 520">
+  <defs>
+    <radialGradient id="ember" cx="20%" cy="100%" r="80%">
+      <stop offset="0%" stop-color="#f2a34a"/>
+      <stop offset="35%" stop-color="#a43d12"/>
+      <stop offset="75%" stop-color="#3d1206"/>
+      <stop offset="100%" stop-color="#160603"/>
+    </radialGradient>
+    <radialGradient id="burst" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff3cf"/>
+      <stop offset="40%" stop-color="#ffb04d"/>
+      <stop offset="100%" stop-color="rgba(255,110,40,0)"/>
+    </radialGradient>
+    <filter id="haze"><feGaussianBlur stdDeviation="6"/></filter>
+    <g id="ship">
+      <polygon points="0,3 14,0 18,3 14,6" fill="#c9d4ee"/>
+      <line x1="-26" y1="3" x2="-2" y2="3" stroke="#7ea8ff" stroke-width="1.4" opacity="0.7"/>
+    </g>
+  </defs>
+
+  <rect width="390" height="520" fill="#04050d"/>
+  <g fill="#cdd6f4" opacity="0.85">
+    <circle cx="60" cy="60" r="1"/><circle cx="150" cy="30" r="0.8"/><circle cx="240" cy="70" r="1.1"/>
+    <circle cx="320" cy="40" r="0.9"/><circle cx="360" cy="120" r="0.8"/><circle cx="30" cy="150" r="0.9"/>
+    <circle cx="210" cy="130" r="0.7"/><circle cx="90" cy="110" r="0.8"/><circle cx="300" cy="180" r="1"/>
+  </g>
+
+  <!-- the burning homeworld, falling behind -->
+  <circle cx="60" cy="500" r="190" fill="url(#ember)"/>
+  <g stroke="#ffcf7d" stroke-width="1.4" opacity="0.8">
+    <path d="M20 420 q30 14 62 8" fill="none"/>
+    <path d="M-10 470 q50 20 96 6" fill="none"/>
+    <path d="M60 380 q26 20 54 22" fill="none"/>
+  </g>
+  <ellipse cx="70" cy="410" rx="120" ry="60" fill="rgba(255,140,60,0.18)" filter="url(#haze)"/>
+
+  <!-- the exodus: ships burning for open sky -->
+  <use href="#ship" transform="translate(120,360) rotate(-38)"/>
+  <use href="#ship" transform="translate(160,320) rotate(-38) scale(1.2)"/>
+  <use href="#ship" transform="translate(140,262) rotate(-40) scale(0.9)"/>
+  <use href="#ship" transform="translate(210,282) rotate(-36) scale(1.1)"/>
+  <use href="#ship" transform="translate(196,208) rotate(-40) scale(0.85)"/>
+  <use href="#ship" transform="translate(258,232) rotate(-38) scale(1.3)"/>
+  <use href="#ship" transform="translate(246,150) rotate(-42) scale(0.8)"/>
+  <use href="#ship" transform="translate(306,170) rotate(-38)"/>
+  <use href="#ship" transform="translate(292,96) rotate(-40) scale(0.75)"/>
+  <use href="#ship" transform="translate(340,110) rotate(-38) scale(0.9)"/>
+
+  <!-- the ones that don't make it -->
+  <g>
+    <circle cx="178" cy="378" r="16" fill="url(#burst)"/>
+    <g stroke="#ffd9a0" stroke-width="1.2" opacity="0.9">
+      <line x1="164" y1="364" x2="192" y2="392"/>
+      <line x1="192" y1="364" x2="164" y2="392"/>
+      <line x1="178" y1="358" x2="178" y2="398"/>
+      <line x1="158" y1="378" x2="198" y2="378"/>
+    </g>
+    <circle cx="286" cy="204" r="11" fill="url(#burst)"/>
+    <g stroke="#ffd9a0" stroke-width="1" opacity="0.9">
+      <line x1="277" y1="195" x2="295" y2="213"/>
+      <line x1="295" y1="195" x2="277" y2="213"/>
+    </g>
+    <!-- debris arcs -->
+    <g stroke="#8a5a3a" stroke-width="1" opacity="0.7" fill="none">
+      <path d="M186 386 q14 18 8 34"/>
+      <path d="M170 388 q-10 16 -2 30"/>
+      <path d="M290 210 q8 12 4 24"/>
+    </g>
+  </g>
+
+  <!-- pursuing wedges at the bottom edge -->
+  <g fill="#12080c">
+    <polygon points="30,300 62,308 30,316"/>
+    <polygon points="66,346 94,353 66,360"/>
+  </g>
+</svg>

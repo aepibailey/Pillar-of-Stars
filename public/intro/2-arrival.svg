@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 520">
+  <defs>
+    <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b0d18"/>
+      <stop offset="60%" stop-color="#1c1a2e"/>
+      <stop offset="100%" stop-color="#3d2a3a"/>
+    </linearGradient>
+    <radialGradient id="limb" cx="50%" cy="120%" r="90%">
+      <stop offset="0%" stop-color="#3a6d9e"/>
+      <stop offset="60%" stop-color="#1c3b60"/>
+      <stop offset="100%" stop-color="#0a1830"/>
+    </radialGradient>
+    <linearGradient id="hullshade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#232838"/>
+      <stop offset="100%" stop-color="#05060c"/>
+    </linearGradient>
+    <filter id="glow2"><feGaussianBlur stdDeviation="4"/></filter>
+  </defs>
+
+  <rect width="390" height="520" fill="url(#sky2)"/>
+  <g fill="#cdd6f4" opacity="0.8">
+    <circle cx="40" cy="60" r="1"/><circle cx="120" cy="34" r="0.8"/><circle cx="352" cy="70" r="1.1"/>
+    <circle cx="300" cy="120" r="0.7"/><circle cx="24" cy="180" r="0.9"/><circle cx="366" cy="210" r="0.8"/>
+  </g>
+
+  <!-- planet limb below: the homeworld, moments before -->
+  <ellipse cx="195" cy="640" rx="330" ry="220" fill="url(#limb)"/>
+  <ellipse cx="195" cy="640" rx="330" ry="220" fill="none" stroke="rgba(140,200,255,0.3)" stroke-width="2"/>
+  <!-- city lights on the night side -->
+  <g fill="#ffd98a" opacity="0.8">
+    <circle cx="120" cy="452" r="1.4"/><circle cx="138" cy="460" r="1"/><circle cx="152" cy="450" r="1.2"/>
+    <circle cx="230" cy="446" r="1.3"/><circle cx="252" cy="456" r="1"/><circle cx="270" cy="448" r="1.4"/>
+    <circle cx="196" cy="462" r="1.1"/><circle cx="94" cy="466" r="1"/><circle cx="300" cy="462" r="1"/>
+  </g>
+
+  <!-- the capital ship: a dagger the size of a city, prow down -->
+  <g>
+    <ellipse cx="195" cy="150" rx="150" ry="90" fill="#0d0a14" opacity="0.55" filter="url(#glow2)"/>
+    <polygon points="52,26 338,26 210,330 180,330" fill="url(#hullshade)"/>
+    <polygon points="92,26 298,26 202,262 188,262" fill="#151a28"/>
+    <polygon points="140,26 250,26 198,180 192,180" fill="#1d2334"/>
+    <!-- ridge line -->
+    <polygon points="192,40 198,40 196,300 194,300" fill="#2a3148"/>
+    <!-- conning tower -->
+    <rect x="171" y="12" width="48" height="20" fill="#10141f"/>
+    <rect x="185" y="4" width="20" height="12" fill="#151a28"/>
+    <circle cx="190" cy="10" r="1.5" fill="#8fd0ff"/>
+    <circle cx="200" cy="10" r="1.5" fill="#8fd0ff"/>
+    <!-- running lights along the hull -->
+    <g fill="#a33">
+      <circle cx="120" cy="60" r="1.6"/><circle cx="270" cy="60" r="1.6"/>
+      <circle cx="152" cy="130" r="1.4"/><circle cx="238" cy="130" r="1.4"/>
+      <circle cx="178" cy="220" r="1.2"/><circle cx="212" cy="220" r="1.2"/>
+    </g>
+    <!-- weapon batteries charging -->
+    <g fill="#ff7a4d" filter="url(#glow2)">
+      <circle cx="186" cy="290" r="3.4"/>
+      <circle cx="204" cy="290" r="3.4"/>
+    </g>
+  </g>
+
+  <!-- escort wedges -->
+  <g fill="#0c1018">
+    <polygon points="60,180 84,186 60,192"/>
+    <polygon points="330,150 306,156 330,162"/>
+    <polygon points="86,110 106,115 86,120"/>
+  </g>
+</svg>

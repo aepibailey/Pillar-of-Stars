@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 520">
+  <defs>
+    <radialGradient id="ocean" cx="38%" cy="32%" r="78%">
+      <stop offset="0%" stop-color="#63b7e0"/>
+      <stop offset="45%" stop-color="#2a6fae"/>
+      <stop offset="100%" stop-color="#0a2b55"/>
+    </radialGradient>
+    <radialGradient id="atmo" cx="50%" cy="50%" r="50%">
+      <stop offset="76%" stop-color="rgba(130,195,255,0)"/>
+      <stop offset="90%" stop-color="rgba(150,205,255,0.35)"/>
+      <stop offset="100%" stop-color="rgba(170,215,255,0)"/>
+    </radialGradient>
+    <radialGradient id="night" cx="82%" cy="60%" r="90%">
+      <stop offset="0%" stop-color="rgba(2,4,12,0.85)"/>
+      <stop offset="45%" stop-color="rgba(2,4,12,0.45)"/>
+      <stop offset="70%" stop-color="rgba(2,4,12,0)"/>
+    </radialGradient>
+    <clipPath id="globe"><circle cx="195" cy="252" r="148"/></clipPath>
+    <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+
+  <rect width="390" height="520" fill="#04060e"/>
+  <g fill="#cdd6f4">
+    <circle cx="30" cy="40" r="1.2"/><circle cx="88" cy="22" r="0.8"/><circle cx="150" cy="55" r="1"/>
+    <circle cx="238" cy="30" r="1.3"/><circle cx="305" cy="48" r="0.9"/><circle cx="360" cy="26" r="1.1"/>
+    <circle cx="20" cy="140" r="0.8"/><circle cx="368" cy="150" r="1"/><circle cx="345" cy="430" r="1.2"/>
+    <circle cx="42" cy="452" r="0.9"/><circle cx="120" cy="486" r="1"/><circle cx="262" cy="470" r="0.8"/>
+    <circle cx="330" cy="500" r="1.1"/><circle cx="70" cy="90" r="0.7"/><circle cx="322" cy="96" r="0.8"/>
+  </g>
+
+  <circle cx="195" cy="252" r="148" fill="url(#ocean)"/>
+  <g clip-path="url(#globe)">
+    <!-- invented landmasses: deliberately un-Earthlike -->
+    <path d="M85 180 q30 -38 74 -26 q26 8 22 34 q-4 24 -36 22 q-18 -2 -22 16 q-4 20 -30 14 q-30 -8 -22 -34 q6 -18 14 -26z" fill="#5d8f4e"/>
+    <path d="M232 130 q42 -10 62 18 q16 24 -6 40 q-26 18 -50 4 q-22 -14 -18 -36 q4 -18 12 -26z" fill="#6a9a52"/>
+    <path d="M120 320 q16 -30 58 -24 q40 6 58 -10 q26 -22 48 -2 q20 20 2 44 q-24 30 -70 24 q-30 -4 -52 8 q-30 16 -46 -6 q-10 -18 2 -34z" fill="#548947"/>
+    <path d="M268 300 q30 -6 40 16 q8 20 -12 30 q-24 10 -38 -6 q-12 -16 10 -40z" fill="#7ba35c"/>
+    <path d="M92 260 q18 -4 22 12 q4 14 -12 18 q-18 4 -24 -10 q-4 -14 14 -20z" fill="#6a9a52"/>
+    <!-- polar cap, off-axis -->
+    <ellipse cx="160" cy="118" rx="52" ry="20" fill="#dfeaf2" opacity="0.85"/>
+    <!-- clouds -->
+    <g fill="#ffffff" opacity="0.22" filter="url(#soft)">
+      <ellipse cx="140" cy="210" rx="70" ry="12"/>
+      <ellipse cx="250" cy="250" rx="80" ry="10" transform="rotate(-14 250 250)"/>
+      <ellipse cx="170" cy="330" rx="90" ry="12" transform="rotate(8 170 330)"/>
+      <ellipse cx="270" cy="170" rx="46" ry="8" transform="rotate(-24 270 170)"/>
+    </g>
+    <rect x="47" y="104" width="296" height="296" fill="url(#night)"/>
+  </g>
+  <circle cx="195" cy="252" r="156" fill="url(#atmo)"/>
+</svg>

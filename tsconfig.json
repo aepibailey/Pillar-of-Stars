@@ -11,6 +11,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
+    "types": ["vite/client", "node"],
     "noEmit": true
   },
   "include": ["src", "tests", "data", "vite.config.ts"]

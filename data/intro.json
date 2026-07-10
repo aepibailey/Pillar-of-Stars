@@ -1,28 +1,28 @@
 {
   "frames": [
     {
-      "glyph": "🌍",
-      "gradient": ["#0a2440", "#1d4d33"],
+      "image": "intro/1-homeworld.svg",
+      "gradient": ["#0a2440", "#0d1d33"],
       "text": "Herevale. Your world. Ten thousand years of songs, harvests, quarrels, and quiet evenings under a sky whose stars all pointed one direction — coreward, toward the Pillar."
     },
     {
-      "glyph": "🛰️",
-      "gradient": ["#1a1a2e", "#3d1d4d"],
-      "text": "They arrived without demands. The Wake does not negotiate with worlds it has already judged. The sky filled with hulls the color of ash."
+      "image": "intro/2-arrival.svg",
+      "gradient": ["#0b0d18", "#3d2a3a"],
+      "text": "They arrived without demands. The Wake does not negotiate with worlds it has already judged. A hull the size of a mountain range slid down through the noon sky, and the light changed."
     },
     {
-      "glyph": "🔥",
-      "gradient": ["#40140a", "#7a2d0e"],
-      "text": "It took them one day. The songs, the harvests, the quiet evenings — burned to glass. You watched from a freight rack in a battered survey ship, engines screaming."
+      "image": "intro/3-burning.svg",
+      "gradient": ["#170604", "#c65a17"],
+      "text": "It took them one day. The songs, the harvests, the quiet evenings — burned to glass. You remember the roads out of the city most: everyone running, and the sky too bright behind them."
     },
     {
-      "glyph": "🚀",
-      "gradient": ["#0b0f1e", "#131c38"],
-      "text": "You ran. You are still running. The Wake hunts every survivor by name, and behind you their fleet front swallows the stars one system at a time."
+      "image": "intro/4-exodus.svg",
+      "gradient": ["#04050d", "#160603"],
+      "text": "Whoever had a hull that could hold air ran for open sky. Not all of them made it out of the gravity well. You watched the flashes from a freight rack in a battered survey ship, engines screaming, and stopped counting."
     },
     {
-      "glyph": "✨",
-      "gradient": ["#070b16", "#2a2447"],
+      "image": "intro/5-pillar.svg",
+      "gradient": ["#03030a", "#0a0716"],
       "text": "Ahead, on every horizon, stands the Pillar of Stars — the burning column of the galactic core. The old myths say the Ascended walked that road and vanished beyond it. Maybe what they left behind can save you. Maybe it can do worse than save you."
     }
   ]

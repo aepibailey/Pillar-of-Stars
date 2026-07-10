@@ -14,7 +14,8 @@ import { drawMap, type MapGeometry } from '../render/mapRenderer';
 import { isConsumed, jumpsBehind } from '../threat/wake';
 
 export interface IntroFrame {
-  glyph: string;
+  /** Path under /public, resolved against the deploy base (e.g. "intro/1-homeworld.svg"). */
+  image: string;
   gradient: [string, string];
   text: string;
 }
@@ -197,11 +198,12 @@ export class App {
     const frame = this.introFrames[this.introIndex];
     const last = this.introIndex >= this.introFrames.length - 1;
     overlay.hidden = false;
+    const imgSrc = import.meta.env.BASE_URL + frame.image;
     overlay.innerHTML = `
       <div class="intro" style="background: linear-gradient(180deg, ${frame.gradient[0]}, ${frame.gradient[1]})">
+        <div class="scene"><img src="${imgSrc}" alt="" draggable="false" /></div>
         <button class="skip" data-act="skip">SKIP ▸</button>
-        <div class="glyph">${frame.glyph}</div>
-        <div>
+        <div class="caption">
           <p>${frame.text}</p>
           <div class="controls">
             <button class="primary" data-act="next">${last ? 'Begin' : 'Continue'}</button>
