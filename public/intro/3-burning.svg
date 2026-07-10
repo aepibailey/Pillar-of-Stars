@@ -66,6 +66,15 @@
     <ellipse cx="60" cy="270" rx="20" ry="40"/>
   </g>
 
+  <!-- street-level firelight: the bright band the fleeing crowd is silhouetted against -->
+  <rect x="0" y="396" width="390" height="56" fill="#e8842c"/>
+  <rect x="0" y="396" width="390" height="56" fill="url(#blaze)" opacity="0.6"/>
+  <g filter="url(#fire)">
+    <ellipse cx="90" cy="424" rx="60" ry="16" fill="#ffcf7d" opacity="0.85"/>
+    <ellipse cx="230" cy="428" rx="80" ry="14" fill="#ffb95e" opacity="0.8"/>
+    <ellipse cx="340" cy="422" rx="50" ry="15" fill="#ffcf7d" opacity="0.8"/>
+  </g>
+
   <!-- foreground: the road out, and the people on it -->
   <path d="M0 448 L390 436 L390 520 L0 520 Z" fill="#070403"/>
   <g fill="#070403">
