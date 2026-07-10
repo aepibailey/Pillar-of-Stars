@@ -1,0 +1,15 @@
+{
+  "startFuel": 10,
+  "startScrap": 6,
+  "jumpFuelCost": 1,
+  "consumedExtraFuelCost": 1,
+  "wakeGraceJumps": 3,
+  "wakeConsumesPerJump": 1,
+  "winSector": 3,
+  "sector": {
+    "minSystems": 12,
+    "maxSystems": 18,
+    "gridCols": 4,
+    "gridRows": 4
+  }
+}

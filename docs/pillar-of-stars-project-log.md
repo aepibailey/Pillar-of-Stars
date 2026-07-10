@@ -1,5 +1,6 @@
 # PILLAR OF STARS — Project Log & Supplementary Context
-*Companion file to pillar-of-stars-design-doc.md — captures decisions and context from development conversations that aren't (yet) written into the doc itself.*
+
+_Companion file to pillar-of-stars-design-doc.md — captures decisions and context from development conversations that aren't (yet) written into the doc itself._
 
 ---
 
@@ -16,27 +17,28 @@
 
 The biggest change since v0.5. Triggered by playing M1 and finding it flat: tap planet → read text → pick option → repeat, with no story and no attachment. The diagnosis came out two-part:
 
-1. **M1 is *supposed* to feel thin.** The core texture — combat, pillar #4 — doesn't land until M2–M3, so judging fun at M1 is tasting flour before the cake bakes. The fun test is M1–M3, not M1 alone (§14 says so).
+1. **M1 is _supposed_ to feel thin.** The core texture — combat, pillar #4 — doesn't land until M2–M3, so judging fun at M1 is tasting flour before the cake bakes. The fun test is M1–M3, not M1 alone (§14 says so).
 2. **A real structural question was hiding underneath.** The v0.5 design was a short-run roguelike (45–90 min, growth dies each run, endings gated across many runs), while the game actually being pictured is a Fallout/Stargate/Firefly/BSG-style long RPG: one captain you grow attached to over hours, a story that unfolds, a climactic moral choice (ASCEND vs. RETRIBUTION).
 
 **Resolution — a "long roguelite RPG":**
 
 - **One long journey, not short runs.** Run-length target moved from 45–90 min to a campaign in the tens of hours (§3). The captain is now a genuine protagonist; Fallout-lean RPG framing runs through §1, §2, and §6.0.
-- **Death reworked (§6.4).** Captain death is real but the journey needn't end: *choose* to continue as a surviving crew member, or begin again fresh. Continue-as-crew is a **choice, never automatic**. Begin-again keeps codex + unlocks, so it's never a wipe to zero.
-- **Crew survival = core tension.** Forced restart only happens on a *solo* death (no crew left). This makes keeping crew alive the central ongoing stake and reinforces pillar #5. Almost no new engineering — the §6.4 succession mechanic already existed in v0.5; the long run simply gives it emotional weight.
+- **Death reworked (§6.4).** Captain death is real but the journey needn't end: _choose_ to continue as a surviving crew member, or begin again fresh. Continue-as-crew is a **choice, never automatic**. Begin-again keeps codex + unlocks, so it's never a wipe to zero.
+- **Crew survival = core tension.** Forced restart only happens on a _solo_ death (no crew left). This makes keeping crew alive the central ongoing stake and reinforces pillar #5. Almost no new engineering — the §6.4 succession mechanic already existed in v0.5; the long run simply gives it emotional weight.
 - **Endings reachable in one run (§9.4).** Reversed the v0.5 "gated across many runs." A single long journey now assembles enough map + fragments to reach a real ASCEND / RETRIBUTION ending. Subsequent runs deepen variants; they're no longer required to see an ending.
-- **Captain personal throughline (§6.0).** Background now seeds recurring personal beats so the captain is *someone specific* by late game and death lands as loss.
+- **Captain personal throughline (§6.0).** Background now seeds recurring personal beats so the captain is _someone specific_ by late game and death lands as loss.
 - **Optional Ironman toggle** noted in §6.4 for players who want true permadeath. Off by default.
 
 **New narrative scaffolding:**
 
 - **Cinematic opening (§12.0).** A short, simple intro — painted-pixel stills + text — showing the homeworld's fall, so the player cares before gameplay begins.
-- **Inciting artifact + linearity justification (§9.3, §4).** The player's first act is excavating a ruin and recovering a corrupted Ascended data-core: a partial star-map pointing coreward. This *is* why the game is a directed journey and not an open-galaxy sandbox — you're chasing a broken treasure map with the Wake burning the road behind you. Each sector decodes the next leg.
-- **Milestone note (§14).** Build order is unchanged (the combat-first fun test still holds), but the intro + opening map event are cheap enough to *placeholder in M1* — the direct fix for the "M1 feels flat" complaint: wrap the skeleton in the start of a story.
+- **Inciting artifact + linearity justification (§9.3, §4).** The player's first act is excavating a ruin and recovering a corrupted Ascended data-core: a partial star-map pointing coreward. This _is_ why the game is a directed journey and not an open-galaxy sandbox — you're chasing a broken treasure map with the Wake burning the road behind you. Each sector decodes the next leg.
+- **Milestone note (§14).** Build order is unchanged (the combat-first fun test still holds), but the intro + opening map event are cheap enough to _placeholder in M1_ — the direct fix for the "M1 feels flat" complaint: wrap the skeleton in the start of a story.
 
 **Open follow-ups:**
-- A working name for the inciting data-core artifact — candidates to vet later (the same collision-search discipline as the title): *the Waystone*, *the Cartouche*, *First Light*, *the Threnody*. None checked yet.
-- **Resolved — map visibility:** rough-waypoint navigation. The decoded map resolves only to *regions* (grid-square resolution — the 4-digit-grid land-nav analogy: you know it's somewhere in the square, you have to walk it to pinpoint it), never exact nodes. Corruption = coarse resolution; searching within the region *is* the exploration loop, so it's the diegetic reason the player checks so many planets. Decoding quality (cartographer/linguist crew, cleaner fragments, event rewards) can tighten resolution over time. Written into §4 and §9.3.
+
+- A working name for the inciting data-core artifact — candidates to vet later (the same collision-search discipline as the title): _the Waystone_, _the Cartouche_, _First Light_, _the Threnody_. None checked yet.
+- **Resolved — map visibility:** rough-waypoint navigation. The decoded map resolves only to _regions_ (grid-square resolution — the 4-digit-grid land-nav analogy: you know it's somewhere in the square, you have to walk it to pinpoint it), never exact nodes. Corruption = coarse resolution; searching within the region _is_ the exploration loop, so it's the diegetic reason the player checks so many planets. Decoding quality (cartographer/linguist crew, cleaner fragments, event rewards) can tighten resolution over time. Written into §4 and §9.3.
 
 ---
 
@@ -45,15 +47,16 @@ The biggest change since v0.5. Triggered by playing M1 and finding it flat: tap 
 The title went through several rounds once the Wake/Exiles/Ascended narrative was locked in. Worth keeping this record in case the name ever needs to change (trademark issues, etc.) — the reasoning shouldn't have to be reconstructed from scratch.
 
 **Rejected — name collisions found via search:**
-- *Relict* — existing games use this title
-- *Coreward* — existing games use this title
-- *Afterlight* — existing game and existing movie
-- *Ashfall Exodus* — existing book
-- *Anabasis* — a Battlestar Galactica Deadlock expansion mode, and thematically too close (a hunted fleet fleeing jump-by-jump) — using it would read as derivative of the exact game Pillar of Stars resembles
 
-**Runner-up, vetted clean:** *Exilarch* — a real historical title, "ruler of the exile," the recognized leader of a scattered people during captivity. No collision found in games. Strong thematic fit: the captain becomes this over a run, and the title has a second meaning via succession — the office survives even when the person doesn't. **Worth revisiting if Pillar of Stars ever runs into a collision or just stops feeling right.**
+- _Relict_ — existing games use this title
+- _Coreward_ — existing games use this title
+- _Afterlight_ — existing game and existing movie
+- _Ashfall Exodus_ — existing book
+- _Anabasis_ — a Battlestar Galactica Deadlock expansion mode, and thematically too close (a hunted fleet fleeing jump-by-jump) — using it would read as derivative of the exact game Pillar of Stars resembles
 
-**Winner:** *Pillar of Stars* — what the exiles call the galactic core: the dense, burning column of stars every survivor's story points toward. It guided their ancestors' myths; now it guides the hunted. The Core *is* the pillar, rendered literally in the sky system and visible from every sector map, growing closer run over run. This meaning is now written into §1 of the design doc.
+**Runner-up, vetted clean:** _Exilarch_ — a real historical title, "ruler of the exile," the recognized leader of a scattered people during captivity. No collision found in games. Strong thematic fit: the captain becomes this over a run, and the title has a second meaning via succession — the office survives even when the person doesn't. **Worth revisiting if Pillar of Stars ever runs into a collision or just stops feeling right.**
+
+**Winner:** _Pillar of Stars_ — what the exiles call the galactic core: the dense, burning column of stars every survivor's story points toward. It guided their ancestors' myths; now it guides the hunted. The Core _is_ the pillar, rendered literally in the sky system and visible from every sector map, growing closer run over run. This meaning is now written into §1 of the design doc.
 
 ---
 
@@ -124,7 +127,7 @@ Repo name suggestion used at the time: `pillar-of-stars`.
 
 ## Post-M1 hand-off prompt (v0.6) — paste after the doc is committed
 
-Use this once the updated **v0.6** design doc and this log are committed to the repo (Claude Code reads the repo, so the doc must be updated *first* or it'll be working from stale truth). This is the instruction that carries the v0.6 pivot into the build after the M1 playtest:
+Use this once the updated **v0.6** design doc and this log are committed to the repo (Claude Code reads the repo, so the doc must be updated _first_ or it'll be working from stale truth). This is the instruction that carries the v0.6 pivot into the build after the M1 playtest:
 
 ```
 CONTEXT UPDATE — the design doc has been revised to v0.6. Before writing any
@@ -221,7 +224,7 @@ Explored but not yet formalized as a doc appendix — flagged here as an open ta
 - The current stack (browser-based: Vite + TypeScript + Canvas) requires **no architecture change** to run on a Mac. "Scaling for desktop" is really about relaxing the mobile-first constraint, not adding new required scope.
 - Concrete things a desktop target unlocks: finer combat targeting (subsystem quadrants, called shots, drag-select for ground combat crew), more simultaneous UI (zoomable sector map, multiple panels at once — crew roster + ship status + comms log together), keyboard hotkeys for weapon groups/crew assignment/quick-travel, and a higher visual-fidelity budget (more parallax layers, higher-res planet rendering, more simultaneous VFX without the mobile performance guardrail from §12.3).
 - **Open task:** if desktop becomes a real priority, add a "Desktop Scope" appendix to the design doc listing the specific control/UI upgrades above, rather than leaving it as an informal conversation.
-- **Open fork not yet re-decided:** §7 currently specifies turn-based combat, justified partly by mobile-first reasoning (no precision timing, interruptible, works one-handed). If desktop ever becomes the *primary* target rather than a bonus, this is the one design choice worth revisiting — real-time-with-pause plays better on a big screen with a mouse. Turn-based is the safe default either way (loses nothing on PC), so no urgency to change it — just flagging that the mobile-first justification weakens if the primary platform changes.
+- **Open fork not yet re-decided:** §7 currently specifies turn-based combat, justified partly by mobile-first reasoning (no precision timing, interruptible, works one-handed). If desktop ever becomes the _primary_ target rather than a bonus, this is the one design choice worth revisiting — real-time-with-pause plays better on a big screen with a mouse. Turn-based is the safe default either way (loses nothing on PC), so no urgency to change it — just flagging that the mobile-first justification weakens if the primary platform changes.
 
 ---
 
@@ -232,11 +235,12 @@ Guidance worked out for deciding when to escalate from a standard/cheaper model 
 **Default:** use the lighter/faster model for routine implementation (most CRUD, wiring, straightforward features). Escalate to the strongest available model for: genuine architecture decisions, tricky/intermittent bugs, large multi-file refactors, and anything touching deterministic math that has to be correct (seeded galaxy generation, combat formulas, succession edge cases).
 
 **Signals the current model is "fighting back" — cue to escalate:**
+
 - Fixes the symptom, not the cause (bug patched, reappears adjacent to it two prompts later)
 - Contradicts itself across the session without noticing
 - Repeated failed attempts (2–3+) at the same fix with only cosmetic differences
 - Asks questions it should be able to answer itself from the doc/codebase
-- Vague or hand-wavy explanation when asked *why* a fix worked
+- Vague or hand-wavy explanation when asked _why_ a fix worked
 - Build/test results oscillate (pass/fail/pass/fail) without meaningfully converging
 
 **Before switching models:** try giving more context first — point it at the specific design doc section, ask it to re-read relevant files, ask it to state its plan before executing. Often "fighting back" is under-contexted, not under-powered. If that doesn't resolve it within a turn or two, that's the actual cue to switch. Drop back to the lighter model once the hard part is solved — no need to stay on the expensive model for routine work afterward.

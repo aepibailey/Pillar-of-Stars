@@ -1,0 +1,452 @@
+[
+  {
+    "id": "opener-buried-door",
+    "title": "The Buried Door",
+    "text": "Your scanners flagged it before you even made orbit: a geometric absence under the dust of this dead moon — Ascended stonework, older than any charted civilization. The excavation takes two days with hand tools and a borrowed loader. At the bottom of the trench: a door, and behind it, a chamber that still has power after ten thousand years. A data-core sits in a cradle of light, humming. It is damaged — half its lattice burned away — but it is alive.",
+    "trigger": { "fixed": "run-opener" },
+    "options": [
+      {
+        "label": "Take the core and run",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "The moment you lift it, the chamber goes dark — and the core blooms in your hands. A star-map, vast and broken, pointing one direction: coreward, toward the Pillar. Waypoints flicker across it, smeared with corruption — regions, not places. You'll have to search every one the hard way. Somewhere far behind you, you imagine the Wake's sensors twitching. Time to move.",
+            "effects": { "flags": ["mapRecovered"] }
+          }
+        ]
+      },
+      {
+        "label": "Strip the site for salvage first, then take the core",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "The cradle mechanisms alone are worth a fortune in scrap alloy. You work fast, ugly, and profitably — then lift the core. It blooms: a broken star-map pointing coreward, its waypoints smeared into rough regions by corruption. As you climb out of the trench, the horizon flickers with distant drive-flares. You were not the only one who noticed this place.",
+            "effects": { "scrap": 4, "flags": ["mapRecovered"] }
+          },
+          {
+            "weight": 1,
+            "text": "You get greedy. A support strut gives way and the chamber half-collapses; you drag the core free through the dust, bruised and coughing, leaving the salvage buried. The core still works — it blooms into a broken star-map pointing coreward, waypoints smeared into rough regions. It cost you time you didn't have.",
+            "effects": { "fuel": -1, "flags": ["mapRecovered"] }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sector-ruin-signal",
+    "title": "The Ruin in the Static",
+    "text": "This is it — the source the corrupted waypoint could only smear into a region. An Ascended structure, intact, half-swallowed by the terrain, and broadcasting the same lattice-song as your data-core. Inside, the walls answer the core like an old friend finishing a sentence. A new leg of the star-map begins to resolve.",
+    "trigger": { "fixed": "sector-ruin" },
+    "options": [
+      {
+        "label": "Decode the next leg and go",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "The core drinks from the ruin for an hour and the map sharpens: the next leg of the road coreward, and the jump gate that leads to it. The gate codes are yours. The Wake will find this place eventually — be far away when they do.",
+            "effects": { "decodeSector": true }
+          }
+        ]
+      },
+      {
+        "label": "Linger and sweep the site for anything useful",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "The map sharpens — the next leg, and the gate codes to reach it. In a collapsed side-gallery you also find a cache: sealed cells of refined drive fuel, still potent after millennia. The Ascended left the lights on for whoever followed.",
+            "effects": { "decodeSector": true, "fuel": 2 }
+          },
+          {
+            "weight": 1,
+            "text": "The map sharpens — the next leg, and the gate codes to reach it. But the deep galleries are stripped bare, and on the way out your loader tears a fuel line that costs you precious reserves. Not every ruin is a gift.",
+            "effects": { "decodeSector": true, "fuel": -1 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "planet-verdant-world",
+    "title": "Verdant World",
+    "text": "A living world, green and loud with weather. No signs of settlement — just forests that have never heard a name and rivers running metal-bright. Setting down costs time, but living worlds are generous.",
+    "trigger": { "nodeTypes": ["planet"] },
+    "weight": 3,
+    "options": [
+      {
+        "label": "Land and process volatiles into fuel",
+        "outcomes": [
+          {
+            "weight": 3,
+            "text": "The refinery rig chews through organics and comes up singing: usable drive fuel, cleaner than anything you could buy.",
+            "effects": { "fuel": 2 }
+          },
+          {
+            "weight": 1,
+            "text": "A storm front rolls in mid-process and you have to lift early, cells half-full and one intake fouled.",
+            "effects": { "fuel": 1, "scrap": -1 }
+          }
+        ]
+      },
+      {
+        "label": "Stay in orbit — just survey and move on",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You chart it, name it in your own head, and leave it in peace. If anyone from Herevale is still alive out there, maybe someday this is where they land.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "planet-abandoned-colony",
+    "title": "The Empty Streets",
+    "text": "A colony world, abandoned in a hurry — years ago by the dust, not centuries. Meals still on tables. A whole town holding its breath. Whatever they fled, it came from the sky.",
+    "trigger": { "nodeTypes": ["planet"] },
+    "weight": 2,
+    "options": [
+      {
+        "label": "Scavenge the town",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "You fill the hold with alloy stock, sealed rations, and a working compressor. You try not to look at the family photos still stuck to the walls.",
+            "effects": { "scrap": 3 }
+          },
+          {
+            "weight": 1,
+            "text": "Automated defenses — still loyal to owners years gone — drive you off with your shields scorched. You get away with a sack of fittings and your heart pounding.",
+            "effects": { "scrap": 1, "fuel": -1 }
+          }
+        ]
+      },
+      {
+        "label": "Leave it be",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "Some places want to be left alone. You mark the site on your charts and burn for open sky.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "planet-storm-world",
+    "title": "The Screaming Meridian",
+    "text": "A gas-wreathed rock whose upper atmosphere is one permanent storm. Your sensors flag dense pockets of charged volatiles riding the wind — free fuel, if you're willing to fly into that.",
+    "trigger": { "nodeTypes": ["planet"] },
+    "weight": 2,
+    "options": [
+      {
+        "label": "Skim the storm for volatiles",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "White knuckles, one cracked viewport, and intake cells brimming. The ship smells like ozone for days. Worth it.",
+            "effects": { "fuel": 3, "scrap": -1 }
+          },
+          {
+            "weight": 2,
+            "text": "The storm nearly eats you. You claw back to orbit with torn plating and barely more fuel than the attempt cost.",
+            "effects": { "fuel": 1, "scrap": -2 }
+          }
+        ]
+      },
+      {
+        "label": "Not worth the hull. Pass.",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You watch the storm chew its own horizon for a while, log the readings, and move on.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "station-fuel-depot",
+    "title": "Waystation",
+    "text": "A rattletrap trade station clinging to the local star's L4 point, run by a family who ask no questions and watch your hands the whole time. The fuel price is honest. Nothing else about the place is.",
+    "trigger": { "nodeTypes": ["station"] },
+    "weight": 3,
+    "options": [
+      {
+        "label": "Trade scrap for fuel (2 scrap → 3 fuel)",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "The exchange is quick and wordless. As you undock, the station's sensor dish tracks you a moment too long. You hope they sell fuel to everyone — and information to no one.",
+            "effects": { "scrap": -2, "fuel": 3 }
+          }
+        ]
+      },
+      {
+        "label": "Just dock, stretch your legs, listen to the chatter",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "Dock gossip: shipping lanes gone quiet trailing-side, whole systems dark. They talk about the Wake the way coastal towns talk about weather. Nobody says the word 'exile,' but a few eyes linger on you.",
+            "effects": {}
+          },
+          {
+            "weight": 1,
+            "text": "A deckhand quietly slips you a cell of fuel and won't take payment. 'Had cousins on one of the burned worlds,' she says. 'Go. Don't stop.'",
+            "effects": { "fuel": 1 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "station-press-gang",
+    "title": "The Toll Ring",
+    "text": "The station's docking ring is controlled by a local junta squadron running an 'inspection tariff' racket. Their cutters are faster than you. The polite fiction is that this is voluntary.",
+    "trigger": { "nodeTypes": ["station"] },
+    "weight": 2,
+    "options": [
+      {
+        "label": "Pay the tariff",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You pay. They wave you through with the bored contempt of men who will never have to run from anything. The hold is lighter; the ship is intact.",
+            "effects": { "scrap": -2 }
+          }
+        ]
+      },
+      {
+        "label": "Run the ring without paying",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "You thread the cutter patrol on cold thrusters and burn out of their envelope before they commit to a chase. Free — but you spent fuel like water doing it.",
+            "effects": { "fuel": -1 }
+          },
+          {
+            "weight": 1,
+            "text": "A warning shot clips your aft plating before you clear the ring. You get away — poorer in hull patching than the tariff would have cost.",
+            "effects": { "scrap": -3, "fuel": -1 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "derelict-cold-hulk",
+    "title": "Cold Hulk",
+    "text": "A freighter, decades dead, tumbling end over end. Holed by weapons fire — old-pattern, not Wake. Its transponder still whispers a name nobody will ever answer to again.",
+    "trigger": { "nodeTypes": ["derelict"] },
+    "weight": 3,
+    "options": [
+      {
+        "label": "Suit up and cut your way in",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "The cargo bay is a treasury of alloy and sealed parts. The crew compartments you don't linger in. You take what keeps you flying and leave the rest to the dark.",
+            "effects": { "scrap": 4 }
+          },
+          {
+            "weight": 1,
+            "text": "The hulk's spin is worse than it looked; a shifting bulkhead nearly pins you, and you abandon the sweep with a half-empty sack and a torn glove seal.",
+            "effects": { "scrap": 1 }
+          },
+          {
+            "weight": 1,
+            "text": "Its reactor is somehow still warm — and unstable. You grab what's in reach and push off hard before the whole hulk vents in a slow blue flare.",
+            "effects": { "scrap": 2, "fuel": -1 }
+          }
+        ]
+      },
+      {
+        "label": "Scan and pass — you don't like the look of it",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "The scan logs the wreck's story for your charts: hit while running, engines first. Somebody wanted them stopped, not dead. You leave the ghost to its orbit.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "derelict-distress",
+    "title": "The Looping Signal",
+    "text": "An automated distress beacon, still broadcasting from a lifeboat cluster fused to a shattered hull. The loop is old. The odds of survivors are almost nothing. Almost.",
+    "trigger": { "nodeTypes": ["derelict"] },
+    "weight": 2,
+    "options": [
+      {
+        "label": "Board and check for survivors",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "No one. Frost on the inside of every faceplate. You cut the beacon so it stops calling to nobody, and take the lifeboats' untouched supply cells as inheritance.",
+            "effects": { "fuel": 1, "scrap": 2 }
+          },
+          {
+            "weight": 1,
+            "text": "The 'beacon' is bait — a scavenger snare rigged to mag-clamp your airlock. You tear free with dented plating and your dignity somewhere back in the debris field.",
+            "effects": { "scrap": -2 }
+          }
+        ]
+      },
+      {
+        "label": "Log it and keep moving",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You can't check every ghost in this arm. You log the position and tell yourself someone with more fuel and fewer hunters will come. You almost believe it.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "anomaly-fuel-pocket",
+    "title": "The Bright Shoal",
+    "text": "A drifting shoal of ionized gas, dense and charged — the kind of pocket drive engineers write love letters about. Your intakes could drink straight from it.",
+    "trigger": { "nodeTypes": ["anomaly"] },
+    "weight": 3,
+    "options": [
+      {
+        "label": "Deploy intakes and harvest",
+        "outcomes": [
+          {
+            "weight": 3,
+            "text": "The shoal pours into your cells like it was waiting for you. Best refueling this side of a depot, and nobody to pay.",
+            "effects": { "fuel": 3 }
+          },
+          {
+            "weight": 1,
+            "text": "Midway through the harvest the shoal destabilizes and discharges across your hull — you break off with a partial load and tripped breakers all over the ship.",
+            "effects": { "fuel": 1, "scrap": -1 }
+          }
+        ]
+      },
+      {
+        "label": "Too exposed out here. Skip it.",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "Free fuel draws every tank-dry drifter and pirate in the sector, and you're in no shape to meet them. You slide past the glow and keep your silhouette dark.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "anomaly-sensor-ghost",
+    "title": "Sensor Ghost",
+    "text": "For six full seconds, your sensors swear there is a ship alongside you — matching velocity, twenty meters off your port hull, silent on every band. Then nothing. The log shows six seconds of a contact that cannot exist.",
+    "trigger": { "nodeTypes": ["anomaly"] },
+    "weight": 2,
+    "options": [
+      {
+        "label": "Chase the contact vector",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You burn hard down the ghost's last vector and find... a knot of reflective dust, dead sensors' honest mistake. Probably. You top off nothing, learn nothing, and can't stop checking your port viewport for the rest of the day.",
+            "effects": { "fuel": -1 }
+          },
+          {
+            "weight": 1,
+            "text": "The vector dead-ends in a pocket of debris — centuries old, unfamiliar alloy, faintly warm. You bring a few kilos aboard. Your data-core hums a fraction louder with it in the hold.",
+            "effects": { "scrap": 2 }
+          }
+        ]
+      },
+      {
+        "label": "Log it and forget it",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "Every long-haul crew has a ghost story. Now you have yours. You write it down, and you do not chase it.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "anomaly-grav-rip",
+    "title": "The Rip",
+    "text": "A gravitational shear line scars this volume — some ancient violence bent space here and it never fully healed. Ships can sling off it for a free boost. Ships have also come apart trying.",
+    "trigger": { "nodeTypes": ["anomaly"] },
+    "weight": 2,
+    "options": [
+      {
+        "label": "Ride the shear for a slingshot",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "The ship groans down to her keel bolts — and the shear hurls you out the far side with your jump cells brim-charged. A month of fuel economy in one terrifying minute.",
+            "effects": { "fuel": 2 }
+          },
+          {
+            "weight": 1,
+            "text": "You misjudge the gradient. The shear rattles the ship like a die in a cup, sheds gear through a sprung cargo seal, and spits you out barely ahead on charge.",
+            "effects": { "fuel": 1, "scrap": -2 }
+          }
+        ]
+      },
+      {
+        "label": "Give it a wide berth",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "Whatever tore space here might still be listening for ripples. You go around, the long way, like a sensible person fleeing a genocidal armada.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "any-wake-probe",
+    "title": "Eyes in the Dark",
+    "text": "Your threat board pings once and goes quiet: a Wake reconnaissance probe, dormant until your drive signature woke it. It is already turning its antenna trailing-ward — toward the fleet front. Toward them.",
+    "trigger": { "nodeTypes": ["planet", "station", "derelict", "anomaly"] },
+    "weight": 1,
+    "options": [
+      {
+        "label": "Kill it before it transmits",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "One clean shot and the probe becomes expanding glitter. If it got a burst off first, it was a short one. You tell yourself it didn't.",
+            "effects": { "scrap": 1 }
+          },
+          {
+            "weight": 1,
+            "text": "It transmits as it dies — a long, deliberate pulse aimed trailing-ward. Somewhere behind you, the hunt just got a fresher scent. You burn away from the wreckage faster than you should.",
+            "effects": { "fuel": -1 }
+          }
+        ]
+      },
+      {
+        "label": "Run silent and slip away before it locks you",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "You cut thrust, drift dark between rocks, and let the probe's gaze sweep past. An hour of held breath, and then you're gone — unlogged, unnamed, unhunted. For now.",
+            "effects": {}
+          },
+          {
+            "weight": 1,
+            "text": "Running silent means running slow, and cold-starting the drive afterward drinks reserves. But no transmission chased you out of that system. Cheap at the price.",
+            "effects": { "fuel": -1 }
+          }
+        ]
+      }
+    ]
+  }
+]

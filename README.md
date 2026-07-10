@@ -1,6 +1,6 @@
 # PILLAR OF STARS
 
-*A long-form space opera RPG on a roguelite spine.*
+_A long-form space opera RPG on a roguelite spine._
 
 You are a survivor. The **Wake** — a militant crusader civilization — burned your
 homeworld and scattered your people across an uncharted arm of the galaxy. Following

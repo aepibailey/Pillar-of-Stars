@@ -1,0 +1,29 @@
+{
+  "frames": [
+    {
+      "glyph": "🌍",
+      "gradient": ["#0a2440", "#1d4d33"],
+      "text": "Herevale. Your world. Ten thousand years of songs, harvests, quarrels, and quiet evenings under a sky whose stars all pointed one direction — coreward, toward the Pillar."
+    },
+    {
+      "glyph": "🛰️",
+      "gradient": ["#1a1a2e", "#3d1d4d"],
+      "text": "They arrived without demands. The Wake does not negotiate with worlds it has already judged. The sky filled with hulls the color of ash."
+    },
+    {
+      "glyph": "🔥",
+      "gradient": ["#40140a", "#7a2d0e"],
+      "text": "It took them one day. The songs, the harvests, the quiet evenings — burned to glass. You watched from a freight rack in a battered survey ship, engines screaming."
+    },
+    {
+      "glyph": "🚀",
+      "gradient": ["#0b0f1e", "#131c38"],
+      "text": "You ran. You are still running. The Wake hunts every survivor by name, and behind you their fleet front swallows the stars one system at a time."
+    },
+    {
+      "glyph": "✨",
+      "gradient": ["#070b16", "#2a2447"],
+      "text": "Ahead, on every horizon, stands the Pillar of Stars — the burning column of the galactic core. The old myths say the Ascended walked that road and vanished beyond it. Maybe what they left behind can save you. Maybe it can do worse than save you."
+    }
+  ]
+}
