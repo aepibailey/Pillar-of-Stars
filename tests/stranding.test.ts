@@ -143,7 +143,7 @@ describe('tow (rigged to always fire)', () => {
   const towDeps = riggedDeps(1, 0);
 
   it('moves the player to the BFS-nearest station system and resets the clock', () => {
-    let s = strandedState();
+    const s = strandedState();
     s.strandedDays = 2; // mid-stranding
     const sector = currentSector(s, config);
     const expected = nearestStationSystemId(sector, s.currentSystemId);
@@ -159,7 +159,7 @@ describe('tow (rigged to always fire)', () => {
   });
 
   it('fuel purchases respect data-driven requirements', () => {
-    let s = strandedState();
+    const s = strandedState();
     s.scrap = 2;
     let after = reduce(s, { type: 'WAIT_DAY' }, towDeps);
     // "Buy 6 fuel — 4 scrap" (option 1) needs 4 scrap: rejected.
@@ -174,7 +174,7 @@ describe('tow (rigged to always fire)', () => {
   });
 
   it('a broke player can decline, staying stranded with a fresh clock', () => {
-    let s = strandedState();
+    const s = strandedState();
     s.scrap = 0;
     s.strandedDays = 4;
     let after = reduce(s, { type: 'WAIT_DAY' }, towDeps);

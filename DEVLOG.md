@@ -151,4 +151,4 @@ Running dry is no longer instant death. When stranded (no affordable jump, no af
 
 ### Verification
 
-108 tests green — new suite covers the roll distribution (~15/15/70 over 3k seeded rolls), the full rigged-quiet 5-day sequence with Wake advances exactly on days 2 and 4 and `adrift` death after day 5, tow movement + requirement-gated purchases, robbery win/lose paths, determinism, and BFS station search on synthetic sectors.
+106 tests green — new suite covers the roll distribution (~15/15/70 over 3k seeded rolls), the full rigged-quiet 5-day sequence with Wake advances exactly on days 2 and 4 and `adrift` death after day 5, tow movement + requirement-gated purchases, robbery win/lose paths, determinism, and BFS station search on synthetic sectors.
