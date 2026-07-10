@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 520">
+  <defs>
+    <linearGradient id="dusk6" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c0a1a"/>
+      <stop offset="60%" stop-color="#241a30"/>
+      <stop offset="100%" stop-color="#4a3244"/>
+    </linearGradient>
+    <linearGradient id="stone6" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a3550"/>
+      <stop offset="100%" stop-color="#12101f"/>
+    </linearGradient>
+    <filter id="glow6"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="haze6"><feGaussianBlur stdDeviation="8"/></filter>
+  </defs>
+
+  <rect width="390" height="520" fill="url(#dusk6)"/>
+  <g fill="#cdd6f4" opacity="0.7">
+    <circle cx="40" cy="50" r="1"/><circle cx="120" cy="30" r="0.8"/><circle cx="250" cy="60" r="1.1"/>
+    <circle cx="330" cy="36" r="0.9"/><circle cx="358" cy="110" r="0.8"/><circle cx="26" cy="130" r="0.9"/>
+  </g>
+
+  <!-- distant pillar glow on the horizon: even here, it watches -->
+  <ellipse cx="310" cy="150" rx="46" ry="120" fill="rgba(255,224,160,0.10)" filter="url(#haze6)"/>
+
+  <!-- dune horizon -->
+  <path d="M0 388 q80 -22 180 -10 q120 12 210 -6 L390 520 L0 520 Z" fill="#241626"/>
+  <path d="M0 420 q100 -16 200 -4 q100 10 190 -8 L390 520 L0 520 Z" fill="#150c18"/>
+
+  <!-- the ruins: colossal monoliths, half-buried, older than memory -->
+  <g>
+    <polygon points="96,384 108,180 148,168 156,380" fill="url(#stone6)"/>
+    <polygon points="180,382 186,120 224,112 234,378" fill="url(#stone6)"/>
+    <polygon points="258,380 250,212 292,200 300,374" fill="url(#stone6)"/>
+    <!-- broken capstone lying in the sand -->
+    <polygon points="40,392 62,352 118,344 128,388" fill="#1c1830" transform="rotate(-7 84 372)"/>
+    <!-- glyph lines, faint, patient -->
+    <g stroke="#8f7fd0" stroke-width="2" opacity="0.5" filter="url(#glow6)">
+      <line x1="200" y1="150" x2="216" y2="146"/>
+      <line x1="200" y1="170" x2="220" y2="166"/>
+      <line x1="202" y1="190" x2="214" y2="187"/>
+      <line x1="120" y1="210" x2="138" y2="205"/>
+      <line x1="122" y1="230" x2="134" y2="227"/>
+      <line x1="266" y1="240" x2="284" y2="235"/>
+      <line x1="268" y1="262" x2="280" y2="258"/>
+    </g>
+  </g>
+
+  <!-- the expedition: tiny lights of the latest hopefuls, dwarfed -->
+  <g>
+    <circle cx="140" cy="402" r="2" fill="#ffd98a"/>
+    <circle cx="152" cy="408" r="1.5" fill="#ffd98a"/>
+    <rect x="130" y="396" width="10" height="7" fill="#0a0810"/>
+    <rect x="148" y="402" width="8" height="6" fill="#0a0810"/>
+    <!-- two tiny figures looking up -->
+    <g fill="#0a0810">
+      <circle cx="170" cy="400" r="1.8"/><rect x="168.6" y="401.5" width="2.8" height="7"/>
+      <circle cx="178" cy="402" r="1.6"/><rect x="176.7" y="403.4" width="2.6" height="6"/>
+    </g>
+  </g>
+</svg>

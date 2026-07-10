@@ -23,7 +23,17 @@
     {
       "image": "intro/5-pillar.svg",
       "gradient": ["#03030a", "#0a0716"],
-      "text": "Ahead, on every horizon, stands the Pillar of Stars — the burning column of the galactic core. The old myths say the Ascended walked that road and vanished beyond it. Maybe what they left behind can save you. Maybe it can do worse than save you."
+      "text": "Ahead, on every horizon, stands the Pillar of Stars — the burning column of the galactic core. Every myth your people ever told points down that road. Now it is the only road you have left."
+    },
+    {
+      "image": "intro/6-ancients.svg",
+      "gradient": ["#0c0a1a", "#4a3244"],
+      "text": "Every schoolchild in the arm knows the Ancients. An alien race that vanished tens of thousands of years ago, leaving ruins on a hundred worlds and not one body, not one answer. For centuries, scientists, pilgrims, and treasure fleets have gone coreward to learn what became of them. They found ruins. Only ever more ruins. No revelation has ever come back from the Pillar."
+    },
+    {
+      "image": "intro/7-trench.svg",
+      "gradient": ["#05070f", "#101322"],
+      "text": "So when your blind jump ends at a nameless, empty world wearing Ancient stonework — it should mean nothing. Signals like the one threading up through this dust have swallowed ten thousand lifetimes and given back dirt. But standing at the rim of the dig, listening to something patient still broadcasting far below... you know it. In your gut. This time is different."
     }
   ]
 }

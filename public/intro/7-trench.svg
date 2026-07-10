@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 520">
+  <defs>
+    <linearGradient id="night7" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#05070f"/>
+      <stop offset="100%" stop-color="#101322"/>
+    </linearGradient>
+    <linearGradient id="trenchwall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1b1626"/>
+      <stop offset="100%" stop-color="#060409"/>
+    </linearGradient>
+    <radialGradient id="corelight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffe9b8"/>
+      <stop offset="40%" stop-color="rgba(255,214,140,0.6)"/>
+      <stop offset="100%" stop-color="rgba(255,190,100,0)"/>
+    </radialGradient>
+    <filter id="glow7"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+
+  <rect width="390" height="520" fill="url(#night7)"/>
+  <g fill="#cdd6f4" opacity="0.8">
+    <circle cx="50" cy="46" r="1"/><circle cx="140" cy="28" r="0.8"/><circle cx="240" cy="56" r="1.1"/>
+    <circle cx="320" cy="34" r="0.9"/><circle cx="362" cy="96" r="0.8"/><circle cx="28" cy="110" r="0.9"/>
+    <circle cx="196" cy="80" r="1"/><circle cx="90" cy="90" r="0.7"/>
+  </g>
+  <!-- the pillar, low on this world's horizon -->
+  <rect x="150" y="0" width="90" height="150" fill="rgba(255,224,160,0.06)" filter="url(#glow7)"/>
+
+  <!-- ground plane -->
+  <path d="M0 240 q100 -14 200 -6 q100 8 190 -4 L390 520 L0 520 Z" fill="#171226"/>
+
+  <!-- the excavation trench, cut down toward something that still has power -->
+  <polygon points="120,252 270,246 236,520 158,520" fill="url(#trenchwall)"/>
+  <!-- strata lines -->
+  <g stroke="#2a2138" stroke-width="2" opacity="0.7">
+    <line x1="130" y1="300" x2="262" y2="294"/>
+    <line x1="138" y1="352" x2="254" y2="348"/>
+    <line x1="146" y1="404" x2="248" y2="400"/>
+  </g>
+  <!-- the buried door at the bottom, and the light behind it -->
+  <ellipse cx="197" cy="420" rx="52" ry="34" fill="url(#corelight)" filter="url(#glow7)"/>
+  <rect x="180" y="396" width="34" height="52" rx="4" fill="#0b0812"/>
+  <line x1="197" y1="396" x2="197" y2="448" stroke="#ffe9b8" stroke-width="2" opacity="0.9"/>
+
+  <!-- the survey ship, parked and patient -->
+  <g transform="translate(300,214)">
+    <polygon points="0,10 30,4 40,10 30,16" fill="#232838"/>
+    <circle cx="6" cy="10" r="2" fill="#7ea8ff" opacity="0.8"/>
+  </g>
+
+  <!-- the player, alone at the rim, lit from below -->
+  <g transform="translate(112,222)">
+    <circle cx="6" cy="4" r="3.4" fill="#0a0810"/>
+    <path d="M2.6 8 L9.6 8 L11 24 L8 24 L6.8 14 L5 24 L2 24 L3.4 12 Z" fill="#0a0810"/>
+    <ellipse cx="6" cy="9" rx="5" ry="8" fill="rgba(255,214,140,0.14)" filter="url(#glow7)"/>
+  </g>
+</svg>
