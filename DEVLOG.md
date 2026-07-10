@@ -81,3 +81,33 @@ Running record of significant technical decisions and why. Newest sessions at th
 - The repo had to go **public** for Pages (designer's call — free GitHub accounts can't use Pages on private repos). The Pages site is public by URL in any case.
 - First two workflow runs failed usefully: run 1 caught a missing `@types/node` (Vite config reads `process.env`), run 2 caught Pages-not-enabled-on-private-repo. Both fixed; run 3 green end to end.
 - Playtest notes: saves live in the browser's localStorage (per-device, survives refreshes; clearing site data wipes the run). Pin a galaxy with `?seed=NAME` for reproducible bug reports — include the seed (shown on death/win screens) with any feedback.
+
+---
+
+## Session 3 — 2026-07-10 · M1 playtest patch 1
+
+### What changed (one commit per patch section)
+
+1. **Intro art (§12.0)**: five authored SVG scenes replace the emoji placeholders — non-Earth homeworld, capital-ship arrival, burning city with a visible fleeing crowd (needed a firelight band behind the silhouettes — black-on-black at first), the exodus with ships dying mid-escape, and the Pillar itself as the closing shot. Still data-driven: `data/intro.json` references images under `public/intro/`.
+2. **Opening beat (§9.3)**: "The Buried Door" rewritten to the canonical framing — blind jump on random coordinates → uninhabited world, no sentient life → ruins → faint patterned EM trace → the corrupted data-core. Event structure was already correct (auto-fires after intro, data-flagged run-opener); text-only change.
+3. **Wake probe**: destroy = 70% clean / 10% loss-noticed (+1 Wake jump) / 20% transmission (+2); sneak = 50/50 (+1 on spotted). New generic `wakeAdvance` effect drives pursuit through the standard advance path (grace absorbs first); a catching advance kills on outcome-ACK so the player reads the text. Weights in data; distribution unit-tested.
+4. **Fuel economy**: exploration = an intra-system jump — 0.25 fuel and 0.2 Wake advance each. **Confirmed before building: the Wake previously advanced ONLY on inter-system jumps; exploration contributed nothing — so no double-count.** Wake math moved to integer hundredths-of-a-jump (exact fractional determinism). Fuel-regain outcome probability cut 30% per pool via exact odds math (added "come up empty" outcomes where an option always paid); the depot's scrap→fuel trade untouched per the patch. Side effect (flagged, accepted): the "adrift at fuel 0, scavenge the last node" beat is gone — exploring needs fuel now.
+5. **Ruins**: all ruin nodes read "Ancient Ruins" (no unique names, and the signal ruin is indistinguishable by label). Sectors roll 1–2 decoy ruins, placed outside the waypoint region first. Decoy excavation: 70% safe loot / 15% danger-with-loot / 15% danger-and-empty (= 30% dangerous, half of those still pay) — weights in data, distribution unit-tested. Decoys never decode the sector.
+6. **Wake-space re-entry**: three approaches, all config-driven (`wakeSpace` in config.json) — casual (1 fuel TOTAL, 70% contact), run hot (3 fuel, 60%, much cheaper flee), sneak (4 fuel, 30% − 5%/sensor level). Contact fires an M1-fidelity placeholder event at ONE marked swap point in the JUMP handler; M2 replaces that call with the combat state machine (the event engine posed no obstacle). `ship.sensors` stub (level 0) exists so the sneak formula already reads the future subsystem.
+
+**Designer rulings captured**: approach fuel prices are TOTAL jump cost (casual = normal 1); hull losses join fight placeholders when the M2 ship model exists; sensors stubbed at 0 until M2/M3.
+
+**Save schema v2** — WakeState shape and ship stub changed; pre-patch saves reset on next load.
+
+**Verification**: 88 unit tests green (new suites: probe distribution, ruin distribution + routing, wake-space math/integration/data contracts); build + lint clean; smoke test at 390×844 zero-error, all five intro frames eyeballed.
+
+### Logged for later milestones (do NOT build yet)
+
+- **M2/M6 — Wake-space cloak (relic tech, §9.3/§11)**: a late-game cloak item discoverable in Ascended ruins. Effect: −75% fight chance across ALL THREE wake-space approaches, at +1 fuel on the approach cost. Zero effect outside the ship — no benefit in boarding or planetside combat. Slot it into the relic pipeline when relics exist.
+- **M3 — sensor leveling / threat-probability display**: full spec from the designer — player-visible fight-probability readouts per approach driven by sensor subsystem level, beyond the §7.4 threat-band reveal. The sneak formula already consumes `ship.sensors`; M3 adds the leveling loop and the UI surface. Belongs with the sensor/intel work (threat bands, UNKNOWN reads).
+- **M5 — shop/store mechanic**: buy/sell/trade at stations, including selling sensor DOWNGRADES for scrap (trade safety for money), and a pressure rule: every 3 transactions triggers a +1 Wake jump (commerce is loud). Explicitly M5 scope (§14); spec parked here so M5 starts warm.
+
+### What's next / needed
+
+- **Next**: designer replay of the patched build; then M2 — The Knife Fight (ship subsystems, power management, combat vs 3 archetypes), swapping the wake-fight placeholder at its marked seam.
+- **Needed**: playtest feedback on the new economy (does 0.25/explore make searching feel like spending?), and the standing gate-locked-until-ruin ruling.
