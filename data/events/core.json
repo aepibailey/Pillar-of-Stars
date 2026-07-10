@@ -2,7 +2,7 @@
   {
     "id": "opener-buried-door",
     "title": "The Buried Door",
-    "text": "Your scanners flagged it before you even made orbit: a geometric absence under the dust of this dead moon — Ascended stonework, older than any charted civilization. The excavation takes two days with hand tools and a borrowed loader. At the bottom of the trench: a door, and behind it, a chamber that still has power after ten thousand years. A data-core sits in a cradle of light, humming. It is damaged — half its lattice burned away — but it is alive.",
+    "text": "You fled the fall of Herevale on coordinates you never chose — numbers mashed into the nav console while the sky burned behind you. The blind jump ends here: an uninhabited world, green-gray and silent. No cities. No signals. No sentient life at all. But the survey pass finds ruins — vast, half-buried geometry that predates every charted civilization — and threading out of them, a trace so faint you almost dismiss it: electromagnetic radiation, patterned, patient, still broadcasting after ten thousand years. You follow it down into the stonework, past a door older than your species, to its source: a data-core resting in a cradle of light. It is damaged — half its lattice burned away — but it is alive.",
     "trigger": { "fixed": "run-opener" },
     "options": [
       {
@@ -10,7 +10,7 @@
         "outcomes": [
           {
             "weight": 1,
-            "text": "The moment you lift it, the chamber goes dark — and the core blooms in your hands. A star-map, vast and broken, pointing one direction: coreward, toward the Pillar. Waypoints flicker across it, smeared with corruption — regions, not places. You'll have to search every one the hard way. Somewhere far behind you, you imagine the Wake's sensors twitching. Time to move.",
+            "text": "The moment you lift it, the EM trace stops — ten thousand years of patient broadcasting, ended because someone finally came. Then the core blooms in your hands: a star-map, vast and broken, pointing one direction — coreward, toward the Pillar. Waypoints flicker across it, smeared with corruption. Regions, not places. You'll have to search every one the hard way. Somewhere far behind you, you imagine the Wake's sensors twitching. Time to move.",
             "effects": { "flags": ["mapRecovered"] }
           }
         ]
