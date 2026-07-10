@@ -11,6 +11,7 @@ describe('the Wake (path-following pursuit, fractional advance)', () => {
   it('toHundredths is exact for the tuning values in play', () => {
     expect(toHundredths(1)).toBe(100);
     expect(toHundredths(0.2)).toBe(20);
+    expect(toHundredths(0.1)).toBe(10);
     expect(toHundredths(3)).toBe(300);
   });
 

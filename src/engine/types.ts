@@ -113,7 +113,7 @@ export interface GameConfig {
   wakeGraceJumps: number;
   /** Wake advance per inter-system jump, in jumps (normally 1). */
   wakeAdvancePerJump: number;
-  /** Wake advance per intra-system exploration, in jumps (playtest patch: 0.2). */
+  /** Wake advance per intra-system exploration, in jumps (playtest patch 2: 0.1). */
   wakeAdvancePerExplore: number;
   /** 1-based sector whose arrival wins the M1 build. */
   winSector: number;
