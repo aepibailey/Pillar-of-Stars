@@ -19,12 +19,21 @@ export interface EventEffects {
   flags?: string[];
   /** Decode the current sector's map leg — unlocks its jump gate. */
   decodeSector?: boolean;
+  /** Advance the Wake by this many jumps immediately (probe transmissions etc.). */
+  wakeAdvance?: number;
 }
+
+/**
+ * Optional data-side metadata on outcomes. The engine ignores tags entirely;
+ * they exist so tests (and future tooling) can classify outcomes — e.g. the
+ * ruin distribution contract uses 'danger' / 'loot' / 'empty'.
+ */
 
 export interface EventOutcome {
   weight: number;
   text: string;
   effects?: EventEffects;
+  tags?: string[];
 }
 
 export interface EventOption {

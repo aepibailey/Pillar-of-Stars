@@ -77,6 +77,17 @@ function applyEffects(state: RunState, effects: EventEffects | undefined): void 
   if (effects.decodeSector && !state.decodedSectorIndexes.includes(state.sectorIndex)) {
     state.decodedSectorIndexes.push(state.sectorIndex);
   }
+  if (effects.wakeAdvance) {
+    const pursuit = advanceWake(
+      state.wake,
+      state.visitOrder,
+      state.currentSystemId,
+      effects.wakeAdvance,
+    );
+    state.wake = pursuit.wake;
+    // Death lands on ACK so the player still reads the outcome text first.
+    if (pursuit.caught) state.deathCause = 'wake';
+  }
 }
 
 /**
@@ -222,6 +233,11 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         return state;
       }
       next.activeEvent = null;
+      if (next.deathCause) {
+        // An effect (e.g. wakeAdvance) already sealed this run's fate.
+        next.phase = 'dead';
+        return next;
+      }
       next.phase = 'map';
       checkStranded(next, config);
       return next;

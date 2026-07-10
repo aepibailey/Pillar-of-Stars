@@ -438,32 +438,42 @@
     "weight": 1,
     "options": [
       {
-        "label": "Kill it before it transmits",
+        "label": "Destroy it before it transmits",
         "outcomes": [
           {
-            "weight": 2,
-            "text": "One clean shot and the probe becomes expanding glitter. If it got a burst off first, it was a short one. You tell yourself it didn't.",
-            "effects": { "scrap": 1 }
-          },
-          {
-            "weight": 1,
-            "text": "It transmits as it dies — a long, deliberate pulse aimed trailing-ward. Somewhere behind you, the hunt just got a fresher scent. You burn away from the wreckage faster than you should.",
-            "effects": { "fuel": -1 }
-          }
-        ]
-      },
-      {
-        "label": "Run silent and slip away before it locks you",
-        "outcomes": [
-          {
-            "weight": 2,
-            "text": "You cut thrust, drift dark between rocks, and let the probe's gaze sweep past. An hour of held breath, and then you're gone — unlogged, unnamed, unhunted. For now.",
+            "weight": 7,
+            "text": "One clean shot and the probe becomes expanding glitter — antenna still folded, nothing sent. The dark stays quiet behind you.",
+            "tags": ["clean"],
             "effects": {}
           },
           {
             "weight": 1,
-            "text": "Running silent means running slow, and cold-starting the drive afterward drinks reserves. But no transmission chased you out of that system. Cheap at the price.",
-            "effects": { "fuel": -1 }
+            "text": "The kill is clean, but a probe going dark is its own kind of message. Somewhere along the front, a watch officer marks the silence on a chart — and the hunt leans your way.",
+            "tags": ["noticed"],
+            "effects": { "wakeAdvance": 1 }
+          },
+          {
+            "weight": 2,
+            "text": "It transmits as it dies — a long, deliberate pulse aimed trailing-ward, and your shot arrives half a breath too late. Somewhere behind you, ash-colored hulls change heading. The hunt just got a fresher scent.",
+            "tags": ["transmitted"],
+            "effects": { "wakeAdvance": 2 }
+          }
+        ]
+      },
+      {
+        "label": "Run silent and sneak past it",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You cut thrust, drift dark between rocks, and let the probe's gaze sweep past. An hour of held breath, and then you're gone — unlogged, unnamed, unhunted. For now.",
+            "tags": ["clean"],
+            "effects": {}
+          },
+          {
+            "weight": 1,
+            "text": "Halfway through the drift its antenna twitches and tracks you — one short burst, trailing-ward, before you clear its cone. Not a full fix, but enough. The hunt tightens.",
+            "tags": ["spotted"],
+            "effects": { "wakeAdvance": 1 }
           }
         ]
       }
