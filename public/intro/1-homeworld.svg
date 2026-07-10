@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 520">
   <defs>
-    <radialGradient id="ocean" cx="38%" cy="32%" r="78%">
-      <stop offset="0%" stop-color="#63b7e0"/>
+    <radialGradient id="ocean" gradientUnits="userSpaceOnUse" cx="159" cy="199" r="231">
+      <stop offset="0%" stop-color="#5cb0dc"/>
       <stop offset="45%" stop-color="#2a6fae"/>
       <stop offset="100%" stop-color="#0a2b55"/>
     </radialGradient>
@@ -10,13 +10,22 @@
       <stop offset="90%" stop-color="rgba(150,205,255,0.35)"/>
       <stop offset="100%" stop-color="rgba(170,215,255,0)"/>
     </radialGradient>
-    <radialGradient id="night" cx="82%" cy="60%" r="90%">
+    <radialGradient id="night" cx="84%" cy="62%" r="90%">
       <stop offset="0%" stop-color="rgba(2,4,12,0.85)"/>
       <stop offset="45%" stop-color="rgba(2,4,12,0.45)"/>
       <stop offset="70%" stop-color="rgba(2,4,12,0)"/>
     </radialGradient>
     <clipPath id="globe"><circle cx="195" cy="252" r="148"/></clipPath>
+    <clipPath id="landA"><path id="shapeA" d="M74 196
+      q8 -18 24 -22 q6 -14 22 -12 q10 -12 26 -8 q14 -10 26 -2 q16 -4 20 10
+      q14 4 12 18 q10 8 2 20 q6 12 -8 16 q-2 12 -16 10 q-8 12 -20 6
+      q-6 10 -18 4 q-14 8 -22 -4 q-16 2 -18 -12 q-14 -4 -10 -16 q-10 -8 -20 -8z"/></clipPath>
+    <clipPath id="landB"><path id="shapeB" d="M118 306
+      q12 -16 32 -12 q10 -10 26 -6 q12 -8 24 0 q18 -8 30 2 q16 -2 22 10
+      q16 2 14 16 q12 10 0 20 q4 14 -12 16 q-4 12 -20 10 q-10 12 -24 4
+      q-12 10 -26 2 q-16 8 -26 -4 q-18 4 -22 -10 q-16 -2 -12 -16 q-12 -10 -6 -22z"/></clipPath>
     <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+    <filter id="soft2"><feGaussianBlur stdDeviation="2.5"/></filter>
   </defs>
 
   <rect width="390" height="520" fill="#04060e"/>
@@ -30,20 +39,71 @@
 
   <circle cx="195" cy="252" r="148" fill="url(#ocean)"/>
   <g clip-path="url(#globe)">
-    <!-- invented landmasses: deliberately un-Earthlike -->
-    <path d="M85 180 q30 -38 74 -26 q26 8 22 34 q-4 24 -36 22 q-18 -2 -22 16 q-4 20 -30 14 q-30 -8 -22 -34 q6 -18 14 -26z" fill="#5d8f4e"/>
-    <path d="M232 130 q42 -10 62 18 q16 24 -6 40 q-26 18 -50 4 q-22 -14 -18 -36 q4 -18 12 -26z" fill="#6a9a52"/>
-    <path d="M120 320 q16 -30 58 -24 q40 6 58 -10 q26 -22 48 -2 q20 20 2 44 q-24 30 -70 24 q-30 -4 -52 8 q-30 16 -46 -6 q-10 -18 2 -34z" fill="#548947"/>
-    <path d="M268 300 q30 -6 40 16 q8 20 -12 30 q-24 10 -38 -6 q-12 -16 10 -40z" fill="#7ba35c"/>
-    <path d="M92 260 q18 -4 22 12 q4 14 -12 18 q-18 4 -24 -10 q-4 -14 14 -20z" fill="#6a9a52"/>
-    <!-- polar cap, off-axis -->
-    <ellipse cx="160" cy="118" rx="52" ry="20" fill="#dfeaf2" opacity="0.85"/>
+    <!-- CONTINENT A (north-west): ragged coastline, varied terrain -->
+    <use href="#shapeA" fill="#4f7d43"/>
+    <g clip-path="url(#landA)">
+      <ellipse cx="106" cy="188" rx="34" ry="18" fill="#6f9c50" filter="url(#soft2)"/>
+      <ellipse cx="152" cy="172" rx="26" ry="14" fill="#3c6636" filter="url(#soft2)"/>
+      <ellipse cx="178" cy="200" rx="24" ry="12" fill="#86a75c" filter="url(#soft2)"/>
+      <!-- interior desert -->
+      <ellipse cx="140" cy="212" rx="26" ry="12" fill="#c9a86a" filter="url(#soft2)"/>
+      <ellipse cx="124" cy="222" rx="14" ry="7" fill="#b28d52" filter="url(#soft2)"/>
+      <!-- mountain shadow line -->
+      <path d="M92 206 q26 -10 54 -4" stroke="#2e4c2c" stroke-width="3" fill="none" opacity="0.7"/>
+    </g>
+
+    <!-- CONTINENT B (south-east): different palette mix -->
+    <use href="#shapeB" fill="#557f3f"/>
+    <g clip-path="url(#landB)">
+      <ellipse cx="160" cy="322" rx="30" ry="14" fill="#7da653" filter="url(#soft2)"/>
+      <ellipse cx="222" cy="318" rx="30" ry="14" fill="#3d6a38" filter="url(#soft2)"/>
+      <ellipse cx="248" cy="346" rx="26" ry="14" fill="#6b9450" filter="url(#soft2)"/>
+      <!-- broad arid belt -->
+      <ellipse cx="196" cy="352" rx="40" ry="12" fill="#d2b072" filter="url(#soft2)"/>
+      <ellipse cx="230" cy="362" rx="20" ry="8" fill="#b8925a" filter="url(#soft2)"/>
+      <path d="M140 336 q40 -8 92 2" stroke="#31512e" stroke-width="3" fill="none" opacity="0.6"/>
+    </g>
+
+    <!-- carve bays, straits, and fjords into the coasts (ocean bites) -->
+    <g fill="url(#ocean)">
+      <path d="M96 176 q14 6 12 18 q-14 4 -20 -6 q-2 -8 8 -12z"/>
+      <path d="M170 158 q4 12 -8 16 q-10 -2 -8 -12 q6 -8 16 -4z"/>
+      <ellipse cx="196" cy="214" rx="12" ry="7" transform="rotate(24 196 214)"/>
+      <path d="M118 240 q16 -2 18 10 q-12 8 -22 0 q-2 -8 4 -10z"/>
+      <path d="M150 300 q6 12 -6 18 q-12 -2 -10 -14 q6 -8 16 -4z"/>
+      <ellipse cx="252" cy="330" rx="11" ry="8" transform="rotate(-18 252 330)"/>
+      <path d="M196 372 q14 2 12 12 q-14 6 -22 -2 q0 -8 10 -10z"/>
+      <ellipse cx="176" cy="338" rx="9" ry="6" transform="rotate(40 176 338)"/>
+    </g>
+
+    <!-- peninsulas and coastal spurs breaking the silhouette -->
+    <g>
+      <path d="M204 178 l22 -12 q10 -4 14 4 q2 8 -8 12 l-22 8 q-8 -4 -6 -12z" fill="#4f7d43"/>
+      <path d="M84 220 l-16 10 q-8 6 -4 12 q8 6 16 0 l14 -14 q-2 -8 -10 -8z" fill="#6f9c50"/>
+      <path d="M258 348 l20 8 q8 4 4 12 q-8 6 -16 0 l-16 -12 q2 -8 8 -8z" fill="#557f3f"/>
+      <path d="M128 318 l-18 -6 q-10 -2 -10 6 q2 8 12 8 l16 0 q4 -6 0 -8z" fill="#7da653"/>
+    </g>
+
+    <!-- island chains and small landmasses -->
+    <g fill="#5d8a48">
+      <path d="M262 232 q10 -6 18 0 q8 -2 10 6 q-4 8 -14 6 q-10 2 -14 -12z"/>
+      <path d="M282 254 q8 -4 12 2 q-2 8 -10 6 q-6 -2 -2 -8z"/>
+      <path d="M96 286 q8 -6 16 -2 q4 8 -6 10 q-10 0 -10 -8z"/>
+      <path d="M240 168 q10 -4 14 4 q-2 6 -12 4 q-8 -2 -2 -8z" fill="#6f9c50"/>
+      <path d="M120 356 q10 -4 16 2 q-2 8 -12 6 q-10 -2 -4 -8z" fill="#c9a86a"/>
+    </g>
+
+    <!-- polar caps, BOTH poles, irregular edges -->
+    <path d="M112 128 q18 -22 52 -24 q36 -4 62 10 q18 8 26 20 q-24 -10 -46 -8 q-14 -8 -34 -6 q-22 -2 -36 6 q-16 2 -24 2z" fill="#e8f1f7" opacity="0.92"/>
+    <path d="M130 372 q26 16 64 16 q36 0 60 -12 q-10 16 -38 24 q-36 10 -64 -4 q-16 -10 -22 -24z" fill="#e3edf5" opacity="0.9"/>
+
     <!-- clouds -->
     <g fill="#ffffff" opacity="0.22" filter="url(#soft)">
-      <ellipse cx="140" cy="210" rx="70" ry="12"/>
-      <ellipse cx="250" cy="250" rx="80" ry="10" transform="rotate(-14 250 250)"/>
-      <ellipse cx="170" cy="330" rx="90" ry="12" transform="rotate(8 170 330)"/>
-      <ellipse cx="270" cy="170" rx="46" ry="8" transform="rotate(-24 270 170)"/>
+      <ellipse cx="140" cy="230" rx="70" ry="11"/>
+      <ellipse cx="250" cy="268" rx="80" ry="10" transform="rotate(-14 250 268)"/>
+      <ellipse cx="170" cy="330" rx="90" ry="11" transform="rotate(8 170 330)"/>
+      <ellipse cx="266" cy="184" rx="46" ry="8" transform="rotate(-24 266 184)"/>
+      <ellipse cx="196" cy="150" rx="60" ry="9" transform="rotate(6 196 150)"/>
     </g>
     <rect x="47" y="104" width="296" height="296" fill="url(#night)"/>
   </g>
