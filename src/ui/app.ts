@@ -87,9 +87,9 @@ export class App {
     const fuelWarn = state.fuel <= 3 ? ' warn' : '';
     this.refs.hud.innerHTML = `
       <span class="stat">SECTOR <b>${state.sectorIndex + 1}</b></span>
-      <span class="stat${fuelWarn}">FUEL <b>${state.fuel}</b></span>
+      <span class="stat${fuelWarn}">FUEL <b>${fmt(state.fuel)}</b></span>
       <span class="stat">SCRAP <b>${state.scrap}</b></span>
-      <span class="stat wake">WAKE <b>${behind} back</b></span>
+      <span class="stat wake">WAKE <b>${fmt(behind)} back</b></span>
     `;
   }
 
@@ -142,12 +142,14 @@ export class App {
     const decoded = state.decodedSectorIndexes.includes(state.sectorIndex);
     const inRegion = systemsInCell(sector, sector.waypointCell).some((s) => s.id === here.id);
 
+    const exploreCost = config.exploreFuelCost;
     let html = `<h2>${here.name}${isGate ? ' — JUMP GATE' : ''}</h2>`;
     for (const node of here.nodes) {
       const explored = state.exploredNodeIds.includes(node.id);
+      const canAfford = state.fuel >= exploreCost;
       html += explored
         ? `<button class="done" disabled>${node.name}<span class="sub">surveyed</span></button>`
-        : `<button data-node="${node.id}">${node.name}<span class="sub">explore</span></button>`;
+        : `<button data-node="${node.id}" ${canAfford ? '' : 'disabled'}>${node.name}<span class="sub">explore · ${fmt(exploreCost)} fuel</span></button>`;
     }
     if (isGate) {
       html += decoded
@@ -285,4 +287,9 @@ function must(id: string): HTMLElement {
   const el = document.getElementById(id);
   if (!el) throw new Error(`missing #${id}`);
   return el;
+}
+
+/** Trim trailing zeros: 10 → "10", 9.75 → "9.75", 3.2 → "3.2". */
+function fmt(n: number): string {
+  return Number(n.toFixed(2)).toString();
 }

@@ -2,9 +2,11 @@
   "startFuel": 10,
   "startScrap": 6,
   "jumpFuelCost": 1,
+  "exploreFuelCost": 0.25,
   "consumedExtraFuelCost": 1,
   "wakeGraceJumps": 3,
-  "wakeConsumesPerJump": 1,
+  "wakeAdvancePerJump": 1,
+  "wakeAdvancePerExplore": 0.2,
   "winSector": 3,
   "sector": {
     "minSystems": 12,

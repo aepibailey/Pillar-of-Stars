@@ -52,7 +52,7 @@
         "label": "Linger and sweep the site for anything useful",
         "outcomes": [
           {
-            "weight": 2,
+            "weight": 0.875,
             "text": "The map sharpens — the next leg, and the gate codes to reach it. In a collapsed side-gallery you also find a cache: sealed cells of refined drive fuel, still potent after millennia. The Ascended left the lights on for whoever followed.",
             "effects": { "decodeSector": true, "fuel": 2 }
           },
@@ -84,6 +84,11 @@
             "weight": 1,
             "text": "A storm front rolls in mid-process and you have to lift early, cells half-full and one intake fouled.",
             "effects": { "fuel": 1, "scrap": -1 }
+          },
+          {
+            "weight": 1.714,
+            "text": "The biosphere fights back — spores foul every intake within the hour. You strip and purge the rig and lift with nothing to show for the landing.",
+            "effects": {}
           }
         ]
       },
@@ -152,6 +157,11 @@
             "weight": 2,
             "text": "The storm nearly eats you. You claw back to orbit with torn plating and barely more fuel than the attempt cost.",
             "effects": { "fuel": 1, "scrap": -2 }
+          },
+          {
+            "weight": 1.714,
+            "text": "The volatile pocket collapses the moment your intakes bite — the whole run is turbulence and static for nothing. You abort with scorched plating and empty cells.",
+            "effects": { "scrap": -1 }
           }
         ]
       },
@@ -193,7 +203,7 @@
             "effects": {}
           },
           {
-            "weight": 1,
+            "weight": 0.609,
             "text": "A deckhand quietly slips you a cell of fuel and won't take payment. 'Had cousins on one of the burned worlds,' she says. 'Go. Don't stop.'",
             "effects": { "fuel": 1 }
           }
@@ -285,7 +295,7 @@
         "label": "Board and check for survivors",
         "outcomes": [
           {
-            "weight": 2,
+            "weight": 0.875,
             "text": "No one. Frost on the inside of every faceplate. You cut the beacon so it stops calling to nobody, and take the lifeboats' untouched supply cells as inheritance.",
             "effects": { "fuel": 1, "scrap": 2 }
           },
@@ -327,6 +337,11 @@
             "weight": 1,
             "text": "Midway through the harvest the shoal destabilizes and discharges across your hull — you break off with a partial load and tripped breakers all over the ship.",
             "effects": { "fuel": 1, "scrap": -1 }
+          },
+          {
+            "weight": 1.714,
+            "text": "The shoal thins and scatters before your intakes finish deploying — solar wind got there first. You drift through glitter too sparse to drink.",
+            "effects": {}
           }
         ]
       },
@@ -395,6 +410,11 @@
             "weight": 1,
             "text": "You misjudge the gradient. The shear rattles the ship like a die in a cup, sheds gear through a sprung cargo seal, and spits you out barely ahead on charge.",
             "effects": { "fuel": 1, "scrap": -2 }
+          },
+          {
+            "weight": 1.286,
+            "text": "The shear shrugs you off its shoulder — no slingshot, no boost, just a long queasy tumble back to flat space and a ship full of rattled crockery.",
+            "effects": {}
           }
         ]
       },

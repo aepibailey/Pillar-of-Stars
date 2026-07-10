@@ -29,8 +29,14 @@ export interface ActiveEvent {
 export interface WakeState {
   /** System ids consumed by the Wake in the current sector. */
   consumedIds: string[];
-  /** Player jumps remaining before the Wake starts consuming the trail. */
-  graceRemaining: number;
+  /**
+   * Remaining grace before the Wake starts consuming, in HUNDREDTHS of a jump.
+   * Integer math keeps fractional advances (0.2/exploration) exactly
+   * deterministic — no float drift.
+   */
+  graceHundredths: number;
+  /** Accumulated advance toward the next consumption, in hundredths of a jump. */
+  progressHundredths: number;
 }
 
 export interface RunStats {
@@ -78,10 +84,15 @@ export interface GameConfig {
   startFuel: number;
   startScrap: number;
   jumpFuelCost: number;
+  /** Fuel per intra-system exploration (one node survey = one intra-system jump). */
+  exploreFuelCost: number;
   /** Extra fuel to enter a Wake-consumed system (desperate transit, §4). */
   consumedExtraFuelCost: number;
   wakeGraceJumps: number;
-  wakeConsumesPerJump: number;
+  /** Wake advance per inter-system jump, in jumps (normally 1). */
+  wakeAdvancePerJump: number;
+  /** Wake advance per intra-system exploration, in jumps (playtest patch: 0.2). */
+  wakeAdvancePerExplore: number;
   /** 1-based sector whose arrival wins the M1 build. */
   winSector: number;
   sector: {

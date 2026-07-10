@@ -14,7 +14,8 @@ import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
 import type { Character, GameConfig, RunState } from './types';
 
-export const SCHEMA_VERSION = 1;
+// v2: fractional fuel + hundredths-based WakeState (playtest patch 1).
+export const SCHEMA_VERSION = 2;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -88,7 +89,9 @@ function checkStranded(state: RunState, config: GameConfig): void {
   if (state.phase !== 'map') return;
   const sector = currentSector(state, config);
   const here = sector.systems[state.currentSystemId];
-  const canExplore = here.nodes.some((n) => !state.exploredNodeIds.includes(n.id));
+  const canExplore =
+    state.fuel >= config.exploreFuelCost &&
+    here.nodes.some((n) => !state.exploredNodeIds.includes(n.id));
   if (canExplore) return;
   const canJump = here.links.some((id) => {
     const cost = jumpCost(state, id, config);
@@ -142,7 +145,7 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         next.wake,
         next.visitOrder,
         next.currentSystemId,
-        config.wakeConsumesPerJump,
+        config.wakeAdvancePerJump,
       );
       next.wake = result.wake;
       if (result.caught) {
@@ -160,8 +163,24 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       const here = sector.systems[next.currentSystemId];
       const node = here.nodes.find((n) => n.id === action.nodeId);
       if (!node || next.exploredNodeIds.includes(node.id)) return state;
+      if (next.fuel < config.exploreFuelCost) return state;
 
+      // An intra-system exploration jump: costs fuel and nudges the hunt.
+      next.fuel = Math.max(0, next.fuel - config.exploreFuelCost);
       next.exploredNodeIds.push(node.id);
+
+      const pursuit = advanceWake(
+        next.wake,
+        next.visitOrder,
+        next.currentSystemId,
+        config.wakeAdvancePerExplore,
+      );
+      next.wake = pursuit.wake;
+      if (pursuit.caught) {
+        next.phase = 'dead';
+        next.deathCause = 'wake';
+        return next;
+      }
 
       if (node.type === 'ruin' && here.id === sector.ruinSystemId) {
         fireEvent(next, findFixedEvent(events, 'sector-ruin'), node.id);

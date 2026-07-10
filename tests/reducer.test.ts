@@ -142,6 +142,38 @@ describe('exploration and events', () => {
     expect(['event', 'map', 'dead']).toContain(after.phase);
   });
 
+  it('exploration costs exploreFuelCost (an intra-system jump)', () => {
+    const s = toMap();
+    const sector = currentSector(s, config);
+    const node = sector.systems[s.currentSystemId].nodes[0];
+    const after = reduce(s, { type: 'EXPLORE', nodeId: node.id }, deps);
+    expect(after.fuel).toBe(s.fuel - config.exploreFuelCost);
+  });
+
+  it('exploration is rejected without enough fuel for it', () => {
+    let s = toMap();
+    s = { ...s, fuel: 0.1 };
+    const sector = currentSector(s, config);
+    const node = sector.systems[s.currentSystemId].nodes[0];
+    const after = reduce(s, { type: 'EXPLORE', nodeId: node.id }, deps);
+    expect(after).toBe(s);
+  });
+
+  it('exploration advances the Wake by wakeAdvancePerExplore', () => {
+    let s = toMap();
+    s = structuredClone(s);
+    s.wake.graceHundredths = 0; // grace spent — pursuit is live
+    s.fuel = 99;
+    const sector = currentSector(s, config);
+    const node = sector.systems[s.currentSystemId].nodes[0];
+    const after = reduce(s, { type: 'EXPLORE', nodeId: node.id }, deps);
+    const spent =
+      after.wake.progressHundredths +
+      100 * after.wake.consumedIds.length -
+      (s.wake.progressHundredths + 100 * s.wake.consumedIds.length);
+    expect(spent).toBe(Math.round(config.wakeAdvancePerExplore * 100));
+  });
+
   it('cannot explore the same node twice', () => {
     const s = toMap();
     const sector = currentSector(s, config);
