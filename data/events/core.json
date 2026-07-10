@@ -66,6 +66,55 @@
     ]
   },
   {
+    "id": "ruin-silent-site",
+    "title": "Ancient Ruins",
+    "text": "Ascended stonework, half-swallowed by the terrain — but your data-core stays silent in its cradle. Whatever sang here went quiet ages ago. This is not the source the map is chasing. It might still be worth the climb down: sites like this fed three generations of relic-hunters, and buried more than a few of them.",
+    "trigger": { "nodeTypes": ["ruin"] },
+    "weight": 1,
+    "options": [
+      {
+        "label": "Excavate the site",
+        "outcomes": [
+          {
+            "weight": 40,
+            "tags": ["safe", "loot"],
+            "text": "A patient day with cutting tools pays out: intact alloy conduit, sealed mechanisms, trade goods the relic-hunters somehow missed. The stone watches you work and keeps its silence.",
+            "effects": { "scrap": 3 }
+          },
+          {
+            "weight": 30,
+            "tags": ["safe", "loot"],
+            "text": "The deep galleries were stripped generations ago, but the looters worked sloppy — you pull good salvage out of their own abandoned rigging, and copy a wall of glyphs the codex will want someday.",
+            "effects": { "scrap": 2 }
+          },
+          {
+            "weight": 15,
+            "tags": ["danger", "loot"],
+            "text": "You are not alone down here. Grave-robbers rise out of the side-galleries with cutting torches and bad intentions — it costs you a scramble back to the ship and a hard burn to break contact, but you keep what you'd already pulled: their stash, and yours.",
+            "effects": { "scrap": 3, "fuel": -1 }
+          },
+          {
+            "weight": 15,
+            "tags": ["danger", "empty"],
+            "text": "The doorway was rigged — an old deadfall charge, relic-hunter work, still patient after all these years. The blast brings half the gallery down and you dig yourself out with bleeding hands. Whatever was worth guarding is buried past reaching now.",
+            "effects": { "scrap": -2 }
+          }
+        ]
+      },
+      {
+        "label": "Log it and leave it undisturbed",
+        "outcomes": [
+          {
+            "weight": 1,
+            "tags": ["safe"],
+            "text": "The core is quiet; the map points elsewhere. You chart the site for the codex and leave its dead songs to the dust.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "planet-verdant-world",
     "title": "Verdant World",
     "text": "A living world, green and loud with weather. No signs of settlement — just forests that have never heard a name and rivers running metal-bright. Setting down costs time, but living worlds are generous.",

@@ -12,6 +12,8 @@
     "minSystems": 12,
     "maxSystems": 18,
     "gridCols": 4,
-    "gridRows": 4
+    "gridRows": 4,
+    "extraRuinsMin": 1,
+    "extraRuinsMax": 2
   }
 }

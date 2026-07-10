@@ -69,12 +69,12 @@ describe('sector generation', () => {
     }
   });
 
-  it('each system has 1-4 nodes (ruin system may have 5 with the ruin added)', () => {
+  it('each system has 1-4 base nodes (+1 where a ruin was added)', () => {
     const s = generateSector('nodes-seed', 0, config);
     for (const id of s.systemIds) {
-      const max = id === s.ruinSystemId ? 5 : 4;
-      expect(s.systems[id].nodes.length).toBeGreaterThanOrEqual(1);
-      expect(s.systems[id].nodes.length).toBeLessThanOrEqual(max);
+      const nonRuin = s.systems[id].nodes.filter((n) => n.type !== 'ruin').length;
+      expect(nonRuin).toBeGreaterThanOrEqual(1);
+      expect(nonRuin).toBeLessThanOrEqual(4);
     }
   });
 });
@@ -115,12 +115,51 @@ describe('rough waypoint (§4/§9.3)', () => {
     }
   });
 
-  it('exactly one ruin node exists per sector, in the ruin system', () => {
-    const s = generateSector('one-ruin', 0, config);
-    const ruinNodes = s.systemIds.flatMap((id) =>
-      s.systems[id].nodes.filter((n) => n.type === 'ruin').map((n) => ({ sysId: id, n })),
-    );
-    expect(ruinNodes.length).toBe(1);
-    expect(ruinNodes[0].sysId).toBe(s.ruinSystemId);
+  it('the signal ruin sits in the ruin system; decoys are within the configured band', () => {
+    for (let i = 0; i < 20; i++) {
+      const s = generateSector(`ruins-${i}`, 0, config);
+      const ruinSystems = s.systemIds.filter((id) =>
+        s.systems[id].nodes.some((n) => n.type === 'ruin'),
+      );
+      expect(ruinSystems).toContain(s.ruinSystemId);
+      expect(s.extraRuinSystemIds.length).toBeGreaterThanOrEqual(config.sector.extraRuinsMin);
+      expect(s.extraRuinSystemIds.length).toBeLessThanOrEqual(config.sector.extraRuinsMax);
+      expect(ruinSystems.length).toBe(1 + s.extraRuinSystemIds.length);
+      // one ruin node per ruin system, generically named
+      for (const id of ruinSystems) {
+        const ruinNodes = s.systems[id].nodes.filter((n) => n.type === 'ruin');
+        expect(ruinNodes.length).toBe(1);
+        expect(ruinNodes[0].name).toBe('Ancient Ruins');
+      }
+    }
+  });
+
+  it('decoy ruins never sit on the entry, the gate, or the signal system', () => {
+    for (let i = 0; i < 20; i++) {
+      const s = generateSector(`decoy-${i}`, i % 3, config);
+      for (const id of s.extraRuinSystemIds) {
+        expect(id).not.toBe(s.entrySystemId);
+        expect(id).not.toBe(s.gateSystemId);
+        expect(id).not.toBe(s.ruinSystemId);
+      }
+    }
+  });
+
+  it('decoys fill from OUTSIDE the waypoint region first (patch §5)', () => {
+    for (let i = 0; i < 30; i++) {
+      const s = generateSector(`decoy-out-${i}`, 0, config);
+      const inCell = (id: string) => {
+        const sys = s.systems[id];
+        const c = cellOf(sys.x, sys.y, s.grid.cols, s.grid.rows);
+        return c.col === s.waypointCell.col && c.row === s.waypointCell.row;
+      };
+      const outsideCandidates = s.systemIds.filter(
+        (id) =>
+          id !== s.entrySystemId && id !== s.gateSystemId && id !== s.ruinSystemId && !inCell(id),
+      ).length;
+      const insideDecoys = s.extraRuinSystemIds.filter(inCell).length;
+      // Decoys only spill inside the region when outside candidates ran out.
+      expect(insideDecoys).toBe(Math.max(0, s.extraRuinSystemIds.length - outsideCandidates));
+    }
   });
 });

@@ -34,8 +34,10 @@ export interface Sector {
   systemIds: string[];
   entrySystemId: string;
   gateSystemId: string;
-  /** The system containing this sector's Ascended ruin (the waypoint target). */
+  /** The system containing this sector's SIGNAL ruin — the waypoint target that decodes the map. */
   ruinSystemId: string;
+  /** Systems holding decoy ruins (lootable, dangerous, never decode the map). */
+  extraRuinSystemIds: string[];
   grid: { cols: number; rows: number };
   /** Rough waypoint (§4/§9.3): the CELL the ruin lies in — an area, never a pin. */
   waypointCell: GridCell;

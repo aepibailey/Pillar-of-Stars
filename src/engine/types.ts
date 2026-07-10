@@ -100,5 +100,8 @@ export interface GameConfig {
     maxSystems: number;
     gridCols: number;
     gridRows: number;
+    /** Decoy ruins beyond the waypoint's signal ruin (patch §5). */
+    extraRuinsMin: number;
+    extraRuinsMax: number;
   };
 }

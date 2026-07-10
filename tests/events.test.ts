@@ -33,7 +33,7 @@ describe('event data contracts (content is data, but data has rules)', () => {
   });
 
   it('every explorable node type has at least one authored event', () => {
-    for (const type of ['planet', 'station', 'derelict', 'anomaly'] as const) {
+    for (const type of ['planet', 'station', 'derelict', 'anomaly', 'ruin'] as const) {
       const pool = events.filter((e) => !e.trigger.fixed && e.trigger.nodeTypes?.includes(type));
       expect(pool.length, `no events for node type '${type}'`).toBeGreaterThan(0);
     }

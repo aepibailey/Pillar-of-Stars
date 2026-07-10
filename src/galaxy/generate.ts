@@ -28,12 +28,14 @@ const NODE_WEIGHTS: NodeTypeWeight[] = [
   { type: 'anomaly', weight: 2 },
 ];
 
+// Ruins are labeled generically in the UI (patch §5): the player can't tell
+// the signal ruin from a decoy by its name — the waypoint region is the clue.
 const NODE_LABELS: Record<NodeType, string> = {
   planet: 'Planet',
   station: 'Station',
   derelict: 'Derelict',
   anomaly: 'Anomaly',
-  ruin: 'Ascended Ruin',
+  ruin: 'Ancient Ruins',
 };
 
 function dist(ax: number, ay: number, bx: number, by: number): number {
@@ -207,10 +209,34 @@ export function generateSector(runSeed: string, index: number, config: GameConfi
   ruinSystem.nodes.push({
     id: `${ruinSystem.id}-ruin`,
     type: 'ruin',
-    name: 'Ascended Ruin',
+    name: NODE_LABELS.ruin,
   });
 
   const waypointCell: GridCell = cellOf(ruinSystem.x, ruinSystem.y, gridCols, gridRows);
+
+  // Decoy ruins (patch §5): lootable, dangerous, and deliberately placed
+  // OUTSIDE the signal region first — so a ruin sighting alone proves nothing.
+  const { extraRuinsMin, extraRuinsMax } = config.sector;
+  const extraCount = rng.int(extraRuinsMin, extraRuinsMax);
+  const decoyCandidates = systemIds
+    .map((id) => systems[id])
+    .filter((s) => s.id !== entrySystemId && s.id !== gateSystemId && s.id !== ruinSystem.id);
+  const outside = decoyCandidates.filter(
+    (s) =>
+      !(
+        cellOf(s.x, s.y, gridCols, gridRows).col === waypointCell.col &&
+        cellOf(s.x, s.y, gridCols, gridRows).row === waypointCell.row
+      ),
+  );
+  const inside = decoyCandidates.filter((s) => !outside.includes(s));
+  const extraRuinSystemIds: string[] = [];
+  for (let i = 0; i < extraCount; i++) {
+    const pool = outside.length > 0 ? outside : inside;
+    if (pool.length === 0) break;
+    const chosen = pool.splice(rng.int(0, pool.length - 1), 1)[0];
+    chosen.nodes.push({ id: `${chosen.id}-ruin`, type: 'ruin', name: NODE_LABELS.ruin });
+    extraRuinSystemIds.push(chosen.id);
+  }
 
   return {
     index,
@@ -220,6 +246,7 @@ export function generateSector(runSeed: string, index: number, config: GameConfi
     entrySystemId,
     gateSystemId,
     ruinSystemId: ruinSystem.id,
+    extraRuinSystemIds,
     grid: { cols: gridCols, rows: gridRows },
     waypointCell,
   };
