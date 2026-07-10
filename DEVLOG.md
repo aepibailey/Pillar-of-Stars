@@ -72,3 +72,12 @@ Running record of significant technical decisions and why. Newest sessions at th
 - **Done**: Tasks 0–6. M1 complete per definition of done: intro → ruin → corrupted map → rough-waypoint search → jumps → Wake consuming the trail → fuel death / wake death / sector-3 win. Pillar glow on the horizon from day one.
 - **Next**: designer playtest of M1 on phone; fuel/grace tuning from real play; then M2 (ship subsystems + combat vs 3 archetypes + power management).
 - **Needed from designer**: playtest feedback; a ruling on the gate-locked-until-ruin choice above; eventually a name for the data-core artifact (log lists candidates).
+
+---
+
+## Session 2 — 2026-07-10 · GitHub Pages deployment
+
+- **Live playtest build**: https://aepibailey.github.io/Pillar-of-Stars/ — deployed by `.github/workflows/deploy.yml` on every push to the working branch (and `main`, for later). The workflow gates deployment on lint + the full test suite, builds with `BASE_PATH=/Pillar-of-Stars/` (Vite `base` comes from that env var; local builds default to `/`), and publishes `dist/` via `actions/deploy-pages`.
+- The repo had to go **public** for Pages (designer's call — free GitHub accounts can't use Pages on private repos). The Pages site is public by URL in any case.
+- First two workflow runs failed usefully: run 1 caught a missing `@types/node` (Vite config reads `process.env`), run 2 caught Pages-not-enabled-on-private-repo. Both fixed; run 3 green end to end.
+- Playtest notes: saves live in the browser's localStorage (per-device, survives refreshes; clearing site data wipes the run). Pin a galaxy with `?seed=NAME` for reproducible bug reports — include the seed (shown on death/win screens) with any feedback.
