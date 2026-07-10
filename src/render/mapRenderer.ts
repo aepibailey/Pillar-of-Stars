@@ -11,6 +11,9 @@ import { isConsumed } from '../threat/wake';
 export interface MapGeometry {
   toPx(x: number, y: number): { x: number; y: number };
   hitTest(px: number, py: number): string | null;
+  /** CSS size the geometry was computed for — lets callers detect staleness. */
+  width: number;
+  height: number;
 }
 
 const PAD_X = 26;
@@ -239,6 +242,8 @@ export function drawMap(
 
   return {
     toPx,
+    width: w,
+    height: h,
     hitTest(px: number, py: number): string | null {
       let best: string | null = null;
       let bestD = HIT_RADIUS;

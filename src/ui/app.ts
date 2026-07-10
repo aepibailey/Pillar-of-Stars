@@ -46,6 +46,10 @@ export class App {
     };
     this.refs.canvas.addEventListener('pointerdown', (e) => this.onMapTap(e));
     window.addEventListener('resize', () => this.render());
+    // Redraw whenever the canvas's CSS box changes for ANY reason (panel
+    // height changes, mobile URL-bar collapse, orientation) — keeps the
+    // hit-test geometry in sync with what's actually on screen.
+    new ResizeObserver(() => this.renderMap(this.store.getState())).observe(this.refs.canvas);
     store.subscribe(() => this.onStateChange());
   }
 
@@ -64,8 +68,18 @@ export class App {
 
   private onMapTap(e: PointerEvent): void {
     const state = this.store.getState();
-    if (state.phase !== 'map' || !this.geometry) return;
+    if (state.phase !== 'map') return;
     const rect = this.refs.canvas.getBoundingClientRect();
+    // Stale-geometry guard: if the canvas has resized since the last draw,
+    // the stored hit circles no longer match the pixels — redraw first.
+    if (
+      !this.geometry ||
+      Math.abs(rect.width - this.geometry.width) > 0.5 ||
+      Math.abs(rect.height - this.geometry.height) > 0.5
+    ) {
+      this.renderMap(state);
+    }
+    if (!this.geometry) return;
     const hit = this.geometry.hitTest(e.clientX - rect.left, e.clientY - rect.top);
     if (!hit) return;
     this.selectedId = hit === state.currentSystemId ? null : hit;
@@ -76,10 +90,14 @@ export class App {
 
   private render(): void {
     const state = this.store.getState();
+    // Map draws LAST: the HUD/panel/overlay mutations above can change the
+    // canvas's flex-allotted size, and drawMap must measure the settled
+    // layout or its hit-test geometry is stale (the "taps don't register"
+    // bug — see DEVLOG session 4).
     this.renderHud(state);
-    this.renderMap(state);
     this.renderPanel(state);
     this.renderOverlay(state);
+    this.renderMap(state);
   }
 
   private renderHud(state: RunState): void {
