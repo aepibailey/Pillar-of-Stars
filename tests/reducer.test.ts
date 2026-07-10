@@ -5,6 +5,7 @@ import {
   createRun,
   currentSector,
   exploreCost,
+  isStranded,
   jumpCost,
   reduce,
   type Deps,
@@ -325,21 +326,20 @@ describe('ruin, gate, and winning (§14 definition of done)', () => {
 });
 
 describe('death', () => {
-  it('stranded with no fuel and nothing to explore = dead (fuel)', () => {
+  it('running dry is no longer instant death — the player is stranded, alive, with the wait option', () => {
     let s = toMap();
     const sector = currentSector(s, config);
     const here = sector.systems[s.currentSystemId];
-    // Explore everything here, then set fuel to 0 and trigger a check via ACK path.
     s = structuredClone(s);
     s.exploredNodeIds = here.nodes.map((n) => n.id);
     s.fuel = 1;
-    // jump away and back is complex; instead jump to a neighbor with fuel for exactly it
     const target = here.links[0];
     const targetNodes = sector.systems[target].nodes.map((n) => n.id);
     s.exploredNodeIds.push(...targetNodes);
     const after = reduce(s, { type: 'JUMP', toSystemId: target }, deps);
-    expect(after.phase).toBe('dead');
-    expect(after.deathCause).toBe('fuel');
+    expect(after.phase).toBe('map'); // adrift, not dead — Wait 1 Day is available
+    expect(isStranded(after, config)).toBe(true);
+    expect(after.strandedDays).toBe(0);
   });
 
   it('being caught by the Wake ends the run', () => {

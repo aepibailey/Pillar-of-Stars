@@ -10,7 +10,15 @@
 
 export type Phase = 'intro' | 'map' | 'event' | 'dead' | 'won';
 
-export type DeathCause = 'fuel' | 'wake' | 'stranded';
+/**
+ * 'wake'   — the front caught the player.
+ * 'adrift' — stranded and waited out all rescue days; ship and crew are lost
+ *            with nothing left to succeed from, so §6.4 succession never applies.
+ * 'robbed' — killed by scavengers while stranded.
+ * (Plain fuel exhaustion is no longer instant death — the stranding/wait
+ * mechanic replaced it.)
+ */
+export type DeathCause = 'wake' | 'adrift' | 'robbed';
 
 export interface Character {
   id: string;
@@ -86,6 +94,8 @@ export interface RunState {
 
   wake: WakeState;
   activeEvent: ActiveEvent | null;
+  /** Days waited in the CURRENT stranding (resets when the stranding ends). */
+  strandedDays: number;
   stats: RunStats;
 
   /** Serialized PRNG streams so save/resume continues exact sequences. */
@@ -117,6 +127,16 @@ export interface GameConfig {
   wakeAdvancePerExplore: number;
   /** 1-based sector whose arrival wins the M1 build. */
   winSector: number;
+  /** Out-of-fuel stranding: the Wait-1-Day mechanic. One roll per day. */
+  stranding: {
+    maxWaitDays: number;
+    towChance: number;
+    robberyChance: number;
+    /** The Wake advances every N days waited... */
+    wakeAdvanceEveryDays: number;
+    /** ...by this many jumps. */
+    wakeAdvanceJumps: number;
+  };
   sector: {
     minSystems: number;
     maxSystems: number;

@@ -127,3 +127,28 @@ Running record of significant technical decisions and why. Newest sessions at th
 ### Verification
 
 91 tests green (new: free-closer cost, single-node edge, not-stranded-at-zero-fuel-with-free-closer); build + lint clean; smoke run at 390×844 through the full 7-frame intro → opener → map → event → reload-resume with zero console errors.
+
+---
+
+## Session 5 — 2026-07-10 · Stranded: the Wait-1-Day mechanic
+
+### What was built
+
+Running dry is no longer instant death. When stranded (no affordable jump, no affordable unexplored node, no open gate here), the panel offers **Wait 1 Day**, up to `stranding.maxWaitDays` (5) per stranding. Each day is **one mutually-exclusive roll** (designer ruling — replaced the spec's two independent rolls): 15% **tow**, 15% **robbery**, 70% **quiet day**. All probabilities and rewards live in `data/config.json` + `data/events/core.json`; rolls come off the serialized event RNG stream, so a save/resume mid-stranding continues the exact sequence.
+
+- **Tow**: a hauler drags the ship to the **BFS-nearest station system** (`galaxy/search.ts`; deterministic — BFS follows generated link order; the start system counts if it has a station). The `stranded-tow` event offers tiered fuel purchases (3/2, 6/4, 9/6 fuel/scrap) via a new generic **`option.requires`** mechanism — data-driven resource requirements the engine enforces and the UI greys out. A broke player takes the free tow and re-strands at the dock with a fresh 5-day clock ("per stranding" reset). Fallback: a sector with zero stations (never seen, but possible) keeps the player in place and the rescuers trade directly.
+- **Robbery**: `stranded-robbery` fight, placeholder fidelity per the standing M2 note. Win (50/50 in data, tunable — spec gave no win probability, flagged): **+2 scrap, +4 fuel** (the +4 ends the stranding). Loss: **death** (designer ruling), via a new generic `death` effect in the events vocabulary; lands on outcome-ACK so the text reads first. Death cause `robbed`.
+- **Quiet day**: `stranded-quiet` flavor event, three weighted texts, no effects.
+- **The Wake advances 1 jump per 2 full days waited** (days 2 and 4), through the normal advance path (grace absorbs first; being caught while adrift is death by `wake`).
+- **Day 5 unrescued** → death cause `adrift` — hard run end; per designer, no §6.4 succession (ship and crew are lost together, nothing to succeed from).
+
+### Judgment calls / notes
+
+- Designer rulings captured: robbery loss = **death**; rolls **mutually exclusive** (single roll/day); tow = nearest-station + trade event (M5's real shop replaces the trade options later).
+- Robbery **win probability** was unspecified — shipped 50/50 in data, one number to tune.
+- The wait mechanic applies to **any** dead-end stranding (including fuel-in-tank-but-all-exits-unaffordable edge cases), not strictly fuel-0 — same flavor, no second code path. Old instant-death causes `fuel`/`stranded` are gone; causes are now `wake` / `adrift` / `robbed`.
+- Save schema **v3** (`strandedDays` added): pre-patch saves reset.
+
+### Verification
+
+108 tests green — new suite covers the roll distribution (~15/15/70 over 3k seeded rolls), the full rigged-quiet 5-day sequence with Wake advances exactly on days 2 and 4 and `adrift` death after day 5, tow movement + requirement-gated purchases, robbery win/lose paths, determinism, and BFS station search on synthetic sectors.

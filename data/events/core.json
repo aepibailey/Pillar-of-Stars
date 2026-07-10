@@ -66,6 +66,110 @@
     ]
   },
   {
+    "id": "stranded-tow-hauler",
+    "title": "A Light in the Long Dark",
+    "text": "It starts as one pixel on a dead sensor board, and becomes a ship: an ugly, magnificent ore hauler, running lights blazing, matching your drift. The captain doesn't ask who you are — out here, the oldest law of the void is older than any war. They throw you a tow line and haul your cold hull to the nearest port with a working fuel dock.",
+    "trigger": { "fixed": "stranded-tow" },
+    "options": [
+      {
+        "label": "Buy 3 fuel — 2 scrap",
+        "requires": { "scrap": 2 },
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "The dockmaster counts your scrap twice, then pumps the cells without a word. It isn't much — but the ship is alive again, and alive is everything.",
+            "effects": { "scrap": -2, "fuel": 3 }
+          }
+        ]
+      },
+      {
+        "label": "Buy 6 fuel — 4 scrap",
+        "requires": { "scrap": 4 },
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "A real refueling, the kind that makes the reactor hum contentedly for the first time in days. You leave the dock poorer and considerably less likely to die in the dark.",
+            "effects": { "scrap": -4, "fuel": 6 }
+          }
+        ]
+      },
+      {
+        "label": "Buy 9 fuel — 6 scrap",
+        "requires": { "scrap": 6 },
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "Full cells. The dockhands top you off to the safety valves while the hauler crew waves off your thanks and burns back into the black. You won't forget that pixel of light as long as you live.",
+            "effects": { "scrap": -6, "fuel": 9 }
+          }
+        ]
+      },
+      {
+        "label": "You can't afford much — just catch your breath at the dock",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "The tow was free; the fuel isn't, and your hold is nearly empty. You drift at the dock, watching ships come and go with tanks full of somewhere else. Something will have to turn up.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "stranded-robbery-scavengers",
+    "title": "Teeth in the Dark",
+    "text": "A dead ship draws scavengers like blood in water. This one comes in slow and confident — a patched-together cutter with a reinforced boarding collar and no transponder, crewed by people who have done this before. They aren't answering hails. They don't need anything you'd give up willingly. They want the ship.",
+    "trigger": { "fixed": "stranded-robbery" },
+    "options": [
+      {
+        "label": "Fight them off",
+        "outcomes": [
+          {
+            "weight": 1,
+            "tags": ["win"],
+            "text": "You meet them at the airlock with everything you have, and it turns out a cornered exile is worth three bored scavengers. They break off trailing atmosphere — and in their scramble they abandon a breach skiff clamped to your hull, fuel cells full. Their loss. Very much your gain.",
+            "effects": { "scrap": 2, "fuel": 4 }
+          },
+          {
+            "weight": 1,
+            "tags": ["lose"],
+            "text": "You fight. It isn't enough. The last thing the ship's log records is cutting torches opening the aft airlock, and then the log stops meaning anything at all.",
+            "effects": { "death": "robbed" }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "stranded-quiet-day",
+    "title": "The Long Dark",
+    "text": "You wait. There is a particular silence a dead ship makes — the reactor banked to embers, the vents whispering on quarter-power, your own heartbeat suddenly the loudest system aboard.",
+    "trigger": { "fixed": "stranded-quiet" },
+    "options": [
+      {
+        "label": "Another day in the dark",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "Nothing. Stars wheel past the viewport with monumental indifference. You reread old logs, ration the water, and try not to do the arithmetic on how far behind you the Wake is.",
+            "effects": {}
+          },
+          {
+            "weight": 1,
+            "text": "A contact! — for six agonizing minutes, a drive flare on the boards, growing... and then shrinking. Whoever they were, they had somewhere better to be. The silence afterward is worse than before.",
+            "effects": {}
+          },
+          {
+            "weight": 1,
+            "text": "You spend the day at the viewport with the data-core in your lap. Its lattice glimmers faintly toward the Pillar, patient as stone, as if ten thousand years has taught it that someone always comes. You wish you shared its confidence.",
+            "effects": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "wake-fight-picket",
     "title": "Contact in the Ashes",
     "text": "Wake-held space is not empty space. A picket cutter unfolds from the shadow of a cracked moon, running lights the color of embers, and its targeting array reaches for your hull like a hand. They know what you are. The channel fills with a single repeated word in their liturgical cant: HALT.",

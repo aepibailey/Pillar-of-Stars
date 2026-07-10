@@ -6,7 +6,13 @@
  */
 
 import { getEvent } from '../events/engine';
-import { currentSector, exploreCost, jumpCost, wakeFightChance } from '../engine/reducer';
+import {
+  currentSector,
+  exploreCost,
+  isStranded,
+  jumpCost,
+  wakeFightChance,
+} from '../engine/reducer';
 import type { Store } from '../engine/store';
 import type { RunState, WakeApproach } from '../engine/types';
 import { systemsInCell } from '../galaxy/waypoint';
@@ -210,7 +216,13 @@ export class App {
         ? '<button class="gate" data-act="gate">Enter the Jump Gate<span class="sub">the decoded map leg points through here</span></button>'
         : '<p class="hint warn">Gate locked — the data-core can\'t resolve the exit. Find the Ascended ruin in the marked signal region.</p>';
     }
-    if (state.flags['mapRecovered'] && !decoded) {
+    if (isStranded(state, config)) {
+      const { maxWaitDays } = config.stranding;
+      html += `
+        <p class="hint warn">ADRIFT — no fuel to jump and nothing left to survey. Day ${state.strandedDays} of ${maxWaitDays}.</p>
+        <button class="primary" data-act="wait">Wait 1 Day<span class="sub">passing traffic might find you — or something worse might</span></button>
+      `;
+    } else if (state.flags['mapRecovered'] && !decoded) {
       html += inRegion
         ? '<p class="hint">You are inside the signal region. The ruin is at one of these systems.</p>'
         : '<p class="hint">The data-core marks a signal region on the map — the ruin is somewhere in that area. Tap a system, then jump.</p>';
@@ -218,6 +230,9 @@ export class App {
       html += '<p class="hint">Tap a highlighted system on the map to select a jump.</p>';
     }
     panel.innerHTML = html;
+    panel.querySelector('[data-act="wait"]')?.addEventListener('click', () => {
+      this.store.dispatch({ type: 'WAIT_DAY' });
+    });
 
     panel.querySelectorAll<HTMLButtonElement>('[data-node]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -288,7 +303,10 @@ export class App {
     if (state.activeEvent.stage === 'options') {
       let html = `<div class="sheet"><h1>${def.title}</h1><p>${def.text}</p>`;
       def.options.forEach((opt, i) => {
-        html += `<button class="primary" data-opt="${i}">${opt.label}</button>`;
+        const req = opt.requires;
+        const unmet =
+          req !== undefined && ((req.scrap ?? 0) > state.scrap || (req.fuel ?? 0) > state.fuel);
+        html += `<button class="primary" data-opt="${i}" ${unmet ? 'disabled' : ''}>${opt.label}${unmet ? '<span class="sub">not enough resources</span>' : ''}</button>`;
       });
       html += '</div>';
       overlay.innerHTML = html;
@@ -314,10 +332,12 @@ export class App {
   private renderEnd(overlay: HTMLElement, state: RunState, won: boolean): void {
     overlay.hidden = false;
     const cause = {
-      fuel: 'The drive cells run dry between stars. The ship coasts, silent, and the Wake is never in a hurry.',
       wake: 'They were always going to find the trail. The sky fills with hulls the color of ash — and this time there is nowhere to run.',
-      stranded: 'No fuel to jump, nothing left to scavenge. The void does not negotiate.',
-    }[state.deathCause ?? 'fuel'];
+      adrift:
+        'Five days. You rationed the water, banked the reactor, watched the sky. Nobody came — nobody friendly, anyway. The ship becomes one more cold hulk drifting between stars, waiting for a salvage crew that will wonder, briefly, who you were.',
+      robbed:
+        'They wanted the ship more than you could afford to keep it. The boarding party works methodically through the corridors, and the last light aboard is the glow of their cutting torches.',
+    }[state.deathCause ?? 'adrift'];
     const title = won ? 'SECTOR 3 — THE ROAD GOES ON' : 'THE JOURNEY ENDS';
     const body = won
       ? `The gate spits you into a sky measurably closer to the Pillar — its light now throws shadows. The data-core hums, resolving the next leg of a road ten thousand years cold.\n\n(End of the M1 build. The journey continues in M2.)`

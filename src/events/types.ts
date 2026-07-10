@@ -1,3 +1,4 @@
+import type { DeathCause } from '../engine/types';
 import type { NodeType } from '../galaxy/types';
 
 /**
@@ -26,6 +27,8 @@ export interface EventEffects {
   decodeSector?: boolean;
   /** Advance the Wake by this many jumps immediately (probe transmissions etc.). */
   wakeAdvance?: number;
+  /** This outcome ends the run (applied on outcome acknowledgement). */
+  death?: DeathCause;
 }
 
 /**
@@ -43,10 +46,19 @@ export interface EventOutcome {
 
 export interface EventOption {
   label: string;
+  /** Resources the player must hold to pick this option (engine-enforced). */
+  requires?: { scrap?: number; fuel?: number };
   outcomes: EventOutcome[];
 }
 
-export type FixedTrigger = 'run-opener' | 'sector-ruin' | 'wake-fight' | 'wake-fight-fast';
+export type FixedTrigger =
+  | 'run-opener'
+  | 'sector-ruin'
+  | 'wake-fight'
+  | 'wake-fight-fast'
+  | 'stranded-tow'
+  | 'stranded-robbery'
+  | 'stranded-quiet';
 
 export interface EventTrigger {
   nodeTypes?: NodeType[];

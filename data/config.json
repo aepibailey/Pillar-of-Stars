@@ -12,6 +12,13 @@
   "wakeAdvancePerJump": 1,
   "wakeAdvancePerExplore": 0.1,
   "winSector": 3,
+  "stranding": {
+    "maxWaitDays": 5,
+    "towChance": 0.15,
+    "robberyChance": 0.15,
+    "wakeAdvanceEveryDays": 2,
+    "wakeAdvanceJumps": 1
+  },
   "sector": {
     "minSystems": 12,
     "maxSystems": 18,

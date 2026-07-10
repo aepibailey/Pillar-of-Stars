@@ -9,13 +9,14 @@
 import { findFixedEvent, getEvent, pickNodeEvent, pickOutcome } from '../events/engine';
 import type { EventDef, EventEffects } from '../events/types';
 import { getSector } from '../galaxy/generate';
+import { nearestStationSystemId } from '../galaxy/search';
 import type { Sector } from '../galaxy/types';
 import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
 import type { Character, GameConfig, RunState, WakeApproach } from './types';
 
-// v2: fractional fuel + hundredths-based WakeState (playtest patch 1).
-export const SCHEMA_VERSION = 2;
+// v3: strandedDays + the Wait-1-Day mechanic (was v2: fractional fuel/Wake).
+export const SCHEMA_VERSION = 3;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -24,7 +25,8 @@ export type Action =
   | { type: 'EXPLORE'; nodeId: string }
   | { type: 'RESOLVE_OPTION'; optionIndex: number }
   | { type: 'ACK_OUTCOME' }
-  | { type: 'ENTER_GATE' };
+  | { type: 'ENTER_GATE' }
+  | { type: 'WAIT_DAY' };
 
 export interface Deps {
   events: readonly EventDef[];
@@ -52,6 +54,7 @@ export function createRun(seed: string, config: GameConfig): RunState {
     scrap: config.startScrap,
     wake: createWakeState(config.wakeGraceJumps),
     activeEvent: null,
+    strandedDays: 0,
     stats: { jumps: 0, eventsResolved: 0 },
     rngState: { events: deriveSeed(seed, 'events') },
   };
@@ -112,6 +115,7 @@ function applyEffects(state: RunState, effects: EventEffects | undefined): void 
   if (effects.decodeSector && !state.decodedSectorIndexes.includes(state.sectorIndex)) {
     state.decodedSectorIndexes.push(state.sectorIndex);
   }
+  if (effects.death) state.deathCause = effects.death;
   if (effects.wakeAdvance) {
     const pursuit = advanceWake(
       state.wake,
@@ -126,30 +130,45 @@ function applyEffects(state: RunState, effects: EventEffects | undefined): void 
 }
 
 /**
- * Death by attrition: dead when there is nothing left to do — no affordable
- * jump, no unexplored node in the current system, and no unlocked gate here.
- * (Fuel 0 alone isn't instant death: scavenging the last nodes for fuel is
- * exactly the desperate beat we want.)
+ * Stranded = nothing left to do here: no affordable jump, no affordable
+ * unexplored node, and no unlocked gate. Not death by itself anymore — the
+ * Wait-1-Day mechanic gives up to `stranding.maxWaitDays` rolls for rescue.
  */
-function checkStranded(state: RunState, config: GameConfig): void {
-  if (state.phase !== 'map') return;
+export function isStranded(state: RunState, config: GameConfig): boolean {
+  if (state.phase !== 'map') return false;
   const sector = currentSector(state, config);
   const here = sector.systems[state.currentSystemId];
   const canExplore =
     here.nodes.some((n) => !state.exploredNodeIds.includes(n.id)) &&
     state.fuel >= exploreCost(state, config);
-  if (canExplore) return;
+  if (canExplore) return false;
   const canJump = here.links.some((id) => {
     const cost = jumpCost(state, id, config);
     return cost !== null && state.fuel >= cost;
   });
-  if (canJump) return;
+  if (canJump) return false;
   const atOpenGate =
     state.currentSystemId === sector.gateSystemId &&
     state.decodedSectorIndexes.includes(state.sectorIndex);
-  if (atOpenGate) return;
-  state.phase = 'dead';
-  state.deathCause = state.fuel <= 0 ? 'fuel' : 'stranded';
+  return !atOpenGate;
+}
+
+/**
+ * Central stranding bookkeeping, called after every map-phase resolution:
+ * ends a stranding the moment options exist again (clock resets), and ends
+ * the RUN once all wait days are spent with no way out. That death is final —
+ * ship and crew are gone together, so §6.4 succession has nothing to inherit.
+ */
+function checkStranded(state: RunState, config: GameConfig): void {
+  if (state.phase !== 'map') return;
+  if (!isStranded(state, config)) {
+    state.strandedDays = 0;
+    return;
+  }
+  if (state.strandedDays >= config.stranding.maxWaitDays) {
+    state.phase = 'dead';
+    state.deathCause = 'adrift';
+  }
 }
 
 function fireEvent(state: RunState, def: EventDef, nodeId: string | null): void {
@@ -273,6 +292,9 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       const def = getEvent(events, next.activeEvent.defId);
       const option = def.options[action.optionIndex];
       if (!option) return state;
+      // Data-driven option requirements (e.g. paying scrap for fuel at a dock).
+      const req = option.requires;
+      if (req && ((req.scrap ?? 0) > next.scrap || (req.fuel ?? 0) > next.fuel)) return state;
 
       const rng = new Rng(next.rngState.events);
       const outcome = pickOutcome(option.outcomes, rng);
@@ -317,6 +339,57 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       next.currentSystemId = newSector.entrySystemId;
       next.visitOrder = [newSector.entrySystemId];
       next.wake = createWakeState(config.wakeGraceJumps);
+      return next;
+    }
+
+    case 'WAIT_DAY': {
+      // Out-of-fuel stranding (patch 3): one mutually-exclusive roll per day —
+      // tow / robbery / quiet (designer rulings: single roll; robbery loss = death).
+      if (next.phase !== 'map') return state;
+      if (!isStranded(next, config)) return state;
+      const cfg = config.stranding;
+      if (next.strandedDays >= cfg.maxWaitDays) return state;
+
+      next.strandedDays++;
+
+      // The hunt closes while you drift: 1 jump per full N days waited.
+      if (next.strandedDays % cfg.wakeAdvanceEveryDays === 0) {
+        const pursuit = advanceWake(
+          next.wake,
+          next.visitOrder,
+          next.currentSystemId,
+          cfg.wakeAdvanceJumps,
+        );
+        next.wake = pursuit.wake;
+        if (pursuit.caught) {
+          next.phase = 'dead';
+          next.deathCause = 'wake';
+          return next;
+        }
+      }
+
+      const rng = new Rng(next.rngState.events);
+      const roll = rng.next();
+      next.rngState.events = rng.getState();
+
+      if (roll < cfg.towChance) {
+        // Rescued: towed to the nearest station (or the rescuers trade from
+        // their own tanks if this sector rolled no stations at all).
+        const sector = currentSector(next, config);
+        const stationId = nearestStationSystemId(sector, next.currentSystemId);
+        if (stationId && stationId !== next.currentSystemId) {
+          next.currentSystemId = stationId;
+          if (!next.visitOrder.includes(stationId)) next.visitOrder.push(stationId);
+        }
+        next.strandedDays = 0; // the rescue ends this stranding; a new one re-arms
+        fireEvent(next, findFixedEvent(events, 'stranded-tow'), null);
+        return next;
+      }
+      if (roll < cfg.towChance + cfg.robberyChance) {
+        fireEvent(next, findFixedEvent(events, 'stranded-robbery'), null);
+        return next;
+      }
+      fireEvent(next, findFixedEvent(events, 'stranded-quiet'), null);
       return next;
     }
   }
