@@ -5,11 +5,16 @@ import type { NodeType } from '../galaxy/types';
  * event — content lives in /data/events/*.json and uses this schema.
  *
  * `trigger.fixed` marks structurally special events, still authored as data:
- *  - 'run-opener'  — fires automatically right after the intro (§9.3, the
- *                    opening ruin excavation). Every outcome MUST set the
- *                    'mapRecovered' flag or the run cannot progress.
- *  - 'sector-ruin' — fires when the player explores a sector's ruin node.
- *                    Every outcome MUST include decodeSector: true.
+ *  - 'run-opener'      — fires automatically right after the intro (§9.3, the
+ *                        opening ruin excavation). Every outcome MUST set the
+ *                        'mapRecovered' flag or the run cannot progress.
+ *  - 'sector-ruin'     — fires when the player explores the sector's SIGNAL
+ *                        ruin. Every outcome MUST include decodeSector: true.
+ *  - 'wake-fight'      — M1 placeholder for contact when entering Wake-held
+ *                        space (patch §6). Swapped for the real ship-combat
+ *                        state machine in M2.
+ *  - 'wake-fight-fast' — same, for the 'move fast' approach: its flee option
+ *                        carries reduced consequences.
  */
 
 export interface EventEffects {
@@ -41,9 +46,11 @@ export interface EventOption {
   outcomes: EventOutcome[];
 }
 
+export type FixedTrigger = 'run-opener' | 'sector-ruin' | 'wake-fight' | 'wake-fight-fast';
+
 export interface EventTrigger {
   nodeTypes?: NodeType[];
-  fixed?: 'run-opener' | 'sector-ruin';
+  fixed?: FixedTrigger;
 }
 
 export interface EventDef {

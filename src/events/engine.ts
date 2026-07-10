@@ -1,12 +1,9 @@
 import type { Rng } from '../engine/rng';
 import type { NodeType } from '../galaxy/types';
-import type { EventDef, EventOutcome } from './types';
+import type { EventDef, EventOutcome, FixedTrigger } from './types';
 
 /** Find a fixed-trigger event. Deterministic: lowest id wins if data has several. */
-export function findFixedEvent(
-  defs: readonly EventDef[],
-  fixed: 'run-opener' | 'sector-ruin',
-): EventDef {
+export function findFixedEvent(defs: readonly EventDef[], fixed: FixedTrigger): EventDef {
   const matches = defs
     .filter((d) => d.trigger.fixed === fixed)
     .sort((a, b) => a.id.localeCompare(b.id));

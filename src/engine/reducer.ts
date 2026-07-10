@@ -12,7 +12,7 @@ import { getSector } from '../galaxy/generate';
 import type { Sector } from '../galaxy/types';
 import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
-import type { Character, GameConfig, RunState } from './types';
+import type { Character, GameConfig, RunState, WakeApproach } from './types';
 
 // v2: fractional fuel + hundredths-based WakeState (playtest patch 1).
 export const SCHEMA_VERSION = 2;
@@ -20,7 +20,7 @@ export const SCHEMA_VERSION = 2;
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
   | { type: 'FINISH_INTRO' } // watched or skipped — same transition
-  | { type: 'JUMP'; toSystemId: string }
+  | { type: 'JUMP'; toSystemId: string; approach?: WakeApproach }
   | { type: 'EXPLORE'; nodeId: string }
   | { type: 'RESOLVE_OPTION'; optionIndex: number }
   | { type: 'ACK_OUTCOME' }
@@ -41,6 +41,7 @@ export function createRun(seed: string, config: GameConfig): RunState {
     phase: 'intro',
     characters: [captain],
     captainId: captain.id,
+    ship: { sensors: 0 },
     sectorIndex: 0,
     currentSystemId: sector.entrySystemId,
     visitOrder: [sector.entrySystemId],
@@ -60,13 +61,32 @@ export function currentSector(state: RunState, config: GameConfig): Sector {
   return getSector(state.seed, state.sectorIndex, config);
 }
 
-/** Fuel cost to jump to an adjacent system, or null if not adjacent. */
-export function jumpCost(state: RunState, toSystemId: string, config: GameConfig): number | null {
+/**
+ * Fuel cost to jump to an adjacent system, or null if not adjacent.
+ * Wake-held destinations price by approach (TOTAL cost, casual = normal).
+ */
+export function jumpCost(
+  state: RunState,
+  toSystemId: string,
+  config: GameConfig,
+  approach: WakeApproach = 'casual',
+): number | null {
   const sector = currentSector(state, config);
   const from = sector.systems[state.currentSystemId];
   if (!from || !from.links.includes(toSystemId)) return null;
-  const extra = isConsumed(state.wake, toSystemId) ? config.consumedExtraFuelCost : 0;
-  return config.jumpFuelCost + extra;
+  if (!isConsumed(state.wake, toSystemId)) return config.jumpFuelCost;
+  return config.wakeSpace[approach].fuelCost;
+}
+
+/** Probability of contact when entering Wake-held space via `approach`. */
+export function wakeFightChance(
+  config: GameConfig,
+  approach: WakeApproach,
+  sensorLevel: number,
+): number {
+  const base = config.wakeSpace[approach].fightChance;
+  if (approach !== 'sneak') return base;
+  return Math.max(0, base - config.wakeSpace.sneak.sensorReductionPerLevel * sensorLevel);
 }
 
 function applyEffects(state: RunState, effects: EventEffects | undefined): void {
@@ -142,7 +162,9 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
 
     case 'JUMP': {
       if (next.phase !== 'map') return state;
-      const cost = jumpCost(next, action.toSystemId, config);
+      const approach = action.approach ?? 'casual';
+      const intoWakeSpace = isConsumed(next.wake, action.toSystemId);
+      const cost = jumpCost(next, action.toSystemId, config, approach);
       if (cost === null || next.fuel < cost) return state;
 
       next.fuel -= cost;
@@ -163,6 +185,24 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         next.phase = 'dead';
         next.deathCause = 'wake';
         return next;
+      }
+
+      if (intoWakeSpace) {
+        const chance = wakeFightChance(config, approach, next.ship.sensors);
+        const rng = new Rng(next.rngState.events);
+        const contact = rng.next() < chance;
+        next.rngState.events = rng.getState();
+        if (contact) {
+          // M2 SWAP POINT: this is the single site where a triggered fight
+          // resolves. Today it fires a placeholder event; M2 replaces this
+          // call with entry into the ship-combat state machine.
+          fireEvent(
+            next,
+            findFixedEvent(events, approach === 'fast' ? 'wake-fight-fast' : 'wake-fight'),
+            null,
+          );
+          return next;
+        }
       }
       checkStranded(next, config);
       return next;

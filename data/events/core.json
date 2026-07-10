@@ -66,6 +66,82 @@
     ]
   },
   {
+    "id": "wake-fight-picket",
+    "title": "Contact in the Ashes",
+    "text": "Wake-held space is not empty space. A picket cutter unfolds from the shadow of a cracked moon, running lights the color of embers, and its targeting array reaches for your hull like a hand. They know what you are. The channel fills with a single repeated word in their liturgical cant: HALT.",
+    "trigger": { "fixed": "wake-fight" },
+    "options": [
+      {
+        "label": "Stand and fight",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You put your guns into their sensor mast first and their nerve second. The cutter breaks off, venting atmosphere, and you strip a drive cell from the debris it sheds. It cost you plating you'll miss.",
+            "effects": { "scrap": -1, "fuel": 1 }
+          },
+          {
+            "weight": 1,
+            "text": "It's a mauling, not a duel. You win it — barely — limping clear of the tumbling wreck with your hull groaning and half a cargo rack shot away.",
+            "effects": { "scrap": -3 }
+          }
+        ]
+      },
+      {
+        "label": "Break and run",
+        "outcomes": [
+          {
+            "weight": 2,
+            "text": "You firewall the throttle and run for the dark, burning reserves like a bonfire. Their pursuit breaks off at the edge of the dead zone — this space is already theirs; they don't need to chase hard.",
+            "effects": { "fuel": -2 }
+          },
+          {
+            "weight": 1,
+            "text": "You escape, but not clean — a parting shot chews through your aft plating as you claw away, and the drive drinks deep the whole way out.",
+            "effects": { "fuel": -2, "scrap": -2 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wake-fight-picket-fast",
+    "title": "Contact in the Ashes",
+    "text": "Wake-held space is not empty space. A picket cutter unfolds from the shadow of a cracked moon, targeting array reaching for your hull — but your drive is already screaming hot, exactly as you planned. They know what you are. You know how fast you are.",
+    "trigger": { "fixed": "wake-fight-fast" },
+    "options": [
+      {
+        "label": "Stand and fight",
+        "outcomes": [
+          {
+            "weight": 1,
+            "text": "You put your guns into their sensor mast first and their nerve second. The cutter breaks off, venting atmosphere, and you strip a drive cell from the debris it sheds. It cost you plating you'll miss.",
+            "effects": { "scrap": -1, "fuel": 1 }
+          },
+          {
+            "weight": 1,
+            "text": "It's a mauling, not a duel. You win it — barely — limping clear of the tumbling wreck with your hull groaning and half a cargo rack shot away.",
+            "effects": { "scrap": -3 }
+          }
+        ]
+      },
+      {
+        "label": "Break and run",
+        "outcomes": [
+          {
+            "weight": 3,
+            "text": "This is why you came in hot. The cutter's firing solution chases empty space — you're already past it and gone, a rumor in their sensor logs.",
+            "effects": {}
+          },
+          {
+            "weight": 1,
+            "text": "One glancing hit scores your dorsal plating as you blow through their picket line — but the drive was hot, the vector was yours, and the dark takes you back cheap.",
+            "effects": { "fuel": -1 }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "ruin-silent-site",
     "title": "Ancient Ruins",
     "text": "Ascended stonework, half-swallowed by the terrain — but your data-core stays silent in its cradle. Whatever sang here went quiet ages ago. This is not the source the map is chasing. It might still be worth the climb down: sites like this fed three generations of relic-hunters, and buried more than a few of them.",

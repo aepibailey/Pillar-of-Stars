@@ -3,7 +3,11 @@
   "startScrap": 6,
   "jumpFuelCost": 1,
   "exploreFuelCost": 0.25,
-  "consumedExtraFuelCost": 1,
+  "wakeSpace": {
+    "casual": { "fuelCost": 1, "fightChance": 0.7 },
+    "fast": { "fuelCost": 3, "fightChance": 0.6 },
+    "sneak": { "fuelCost": 4, "fightChance": 0.3, "sensorReductionPerLevel": 0.05 }
+  },
   "wakeGraceJumps": 3,
   "wakeAdvancePerJump": 1,
   "wakeAdvancePerExplore": 0.2,

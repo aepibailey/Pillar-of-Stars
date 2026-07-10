@@ -102,13 +102,20 @@ describe('jumping and fuel', () => {
     expect(after).toBe(s);
   });
 
-  it('jumpCost charges extra for Wake-consumed systems', () => {
+  it('jumpCost prices Wake-held destinations by approach (total cost)', () => {
     let s = toMap();
     const sector = currentSector(s, config);
     const target = sector.systems[s.currentSystemId].links[0];
     expect(jumpCost(s, target, config)).toBe(config.jumpFuelCost);
     s = { ...s, wake: { ...s.wake, consumedIds: [target] } };
-    expect(jumpCost(s, target, config)).toBe(config.jumpFuelCost + config.consumedExtraFuelCost);
+    expect(jumpCost(s, target, config, 'casual')).toBe(config.wakeSpace.casual.fuelCost);
+    expect(jumpCost(s, target, config, 'fast')).toBe(config.wakeSpace.fast.fuelCost);
+    expect(jumpCost(s, target, config, 'sneak')).toBe(config.wakeSpace.sneak.fuelCost);
+    // approach pricing only applies to consumed space
+    const other = sector.systems[s.currentSystemId].links.find((id) => id !== target) ?? target;
+    if (other !== target) {
+      expect(jumpCost(s, other, config, 'sneak')).toBe(config.jumpFuelCost);
+    }
   });
 });
 

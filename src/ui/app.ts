@@ -6,9 +6,9 @@
  */
 
 import { getEvent } from '../events/engine';
-import { currentSector, jumpCost } from '../engine/reducer';
+import { currentSector, jumpCost, wakeFightChance } from '../engine/reducer';
 import type { Store } from '../engine/store';
-import type { RunState } from '../engine/types';
+import type { RunState, WakeApproach } from '../engine/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
 import { isConsumed, jumpsBehind } from '../threat/wake';
@@ -110,29 +110,64 @@ export class App {
 
     if (this.selectedId && this.selectedId !== state.currentSystemId) {
       const target = sector.systems[this.selectedId];
-      const cost = jumpCost(state, target.id, config);
       const consumed = isConsumed(state.wake, target.id);
-      panel.innerHTML = `
-        <h2>${target.name}</h2>
-        ${consumed ? '<p class="warn">Wake-held space. Transit is a desperate gamble — extra fuel to run dark.</p>' : ''}
-        ${
-          cost === null
-            ? '<p class="hint">Out of jump range — no lane connects from your position.</p>'
-            : `<button class="primary" data-act="jump">Jump — ${cost} fuel${state.fuel < cost ? ' (not enough)' : ''}</button>`
-        }
-        <button data-act="deselect">Back</button>
-      `;
-      panel.querySelector('[data-act="jump"]')?.addEventListener('click', () => {
-        if (cost !== null && state.fuel >= cost) {
-          this.store.dispatch({ type: 'JUMP', toSystemId: target.id });
-        }
+      const baseCost = jumpCost(state, target.id, config);
+
+      if (baseCost === null) {
+        panel.innerHTML = `
+          <h2>${target.name}</h2>
+          <p class="hint">Out of jump range — no lane connects from your position.</p>
+          <button data-act="deselect">Back</button>
+        `;
+      } else if (!consumed) {
+        panel.innerHTML = `
+          <h2>${target.name}</h2>
+          <button class="primary" data-act="jump" data-approach="casual" ${state.fuel < baseCost ? 'disabled' : ''}>Jump — ${fmt(baseCost)} fuel</button>
+          <button data-act="deselect">Back</button>
+        `;
+      } else {
+        // Wake-held space: pick your approach (patch §6).
+        const approaches: { id: WakeApproach; label: string; sub: string }[] = (
+          ['casual', 'fast', 'sneak'] as const
+        ).map((id) => {
+          const cost = config.wakeSpace[id].fuelCost;
+          const pct = Math.round(wakeFightChance(config, id, state.ship.sensors) * 100);
+          const labels: Record<WakeApproach, [string, string]> = {
+            casual: ['Fly in casually', `${fmt(cost)} fuel · ${pct}% chance of contact`],
+            fast: [
+              'Run the line hot',
+              `${fmt(cost)} fuel · ${pct}% contact · far easier to flee a fight`,
+            ],
+            sneak: ['Sneak through dark', `${fmt(cost)} fuel · ${pct}% contact`],
+          };
+          return { id, label: labels[id][0], sub: labels[id][1] };
+        });
+        panel.innerHTML = `
+          <h2>${target.name}</h2>
+          <p class="warn">Wake-held space. They are still here, and they are looking for you.</p>
+          ${approaches
+            .map(
+              (a) =>
+                `<button class="primary" data-act="jump" data-approach="${a.id}" ${state.fuel < config.wakeSpace[a.id].fuelCost ? 'disabled' : ''}>${a.label}<span class="sub">${a.sub}</span></button>`,
+            )
+            .join('')}
+          <button data-act="deselect">Back</button>
+        `;
+      }
+
+      panel.querySelectorAll<HTMLButtonElement>('[data-act="jump"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const approach = (btn.dataset.approach ?? 'casual') as WakeApproach;
+          const cost = jumpCost(state, target.id, config, approach);
+          if (cost !== null && state.fuel >= cost) {
+            this.store.dispatch({ type: 'JUMP', toSystemId: target.id, approach });
+          }
+        });
       });
       panel.querySelector('[data-act="deselect"]')?.addEventListener('click', () => {
         this.selectedId = null;
         this.render();
       });
-      const btn = panel.querySelector('[data-act="jump"]') as HTMLButtonElement | null;
-      if (btn && cost !== null && state.fuel < cost) btn.disabled = true;
       return;
     }
 

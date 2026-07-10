@@ -18,6 +18,18 @@ export interface Character {
   role: 'captain' | 'crew';
 }
 
+/** How the player enters Wake-held space (patch §6). */
+export type WakeApproach = 'casual' | 'fast' | 'sneak';
+
+/**
+ * Minimal ship state stub. The real subsystem model is M2 — this exists so
+ * formulas that will read subsystem levels (e.g. sneak's sensor reduction)
+ * already have their hook and won't need rewriting.
+ */
+export interface ShipState {
+  sensors: number;
+}
+
 export interface ActiveEvent {
   defId: string;
   stage: 'options' | 'outcome';
@@ -57,6 +69,8 @@ export interface RunState {
   /** Reference only — reassignable on succession (M4). */
   captainId: string;
 
+  ship: ShipState;
+
   sectorIndex: number; // 0-based; displayed 1-based
   currentSystemId: string;
   /** First-visit order within the current sector — the trail the Wake hunts along. */
@@ -86,8 +100,16 @@ export interface GameConfig {
   jumpFuelCost: number;
   /** Fuel per intra-system exploration (one node survey = one intra-system jump). */
   exploreFuelCost: number;
-  /** Extra fuel to enter a Wake-consumed system (desperate transit, §4). */
-  consumedExtraFuelCost: number;
+  /**
+   * Entering Wake-held space (patch §6). fuelCost is the TOTAL jump cost
+   * (casual = the normal jump price). fightChance is the base probability of
+   * contact; sneak's drops by sensorReductionPerLevel × ship sensor level.
+   */
+  wakeSpace: {
+    casual: { fuelCost: number; fightChance: number };
+    fast: { fuelCost: number; fightChance: number };
+    sneak: { fuelCost: number; fightChance: number; sensorReductionPerLevel: number };
+  };
   wakeGraceJumps: number;
   /** Wake advance per inter-system jump, in jumps (normally 1). */
   wakeAdvancePerJump: number;
