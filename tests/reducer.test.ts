@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
-import { createRun, currentSector, jumpCost, reduce, type Deps } from '../src/engine/reducer';
+import {
+  createRun,
+  currentSector,
+  exploreCost,
+  jumpCost,
+  reduce,
+  type Deps,
+} from '../src/engine/reducer';
 import type { GameConfig, RunState } from '../src/engine/types';
 import type { EventDef } from '../src/events/types';
 import { getSector } from '../src/galaxy/generate';
@@ -149,8 +156,23 @@ describe('exploration and events', () => {
     expect(['event', 'map', 'dead']).toContain(after.phase);
   });
 
-  it('exploration costs exploreFuelCost (an intra-system jump)', () => {
-    const s = toMap();
+  /** Teleport to a system with at least `minNodes` nodes (test-only). */
+  function placeAtSystemWithNodes(s: RunState, minNodes: number): RunState {
+    const sector = currentSector(s, config);
+    const target = sector.systemIds
+      .map((id) => sector.systems[id])
+      .find((sys) => sys.nodes.length >= minNodes);
+    expect(target, `no system with >=${minNodes} nodes in test sector`).toBeTruthy();
+    const next = structuredClone(s);
+    next.currentSystemId = (target as { id: string }).id;
+    if (!next.visitOrder.includes(next.currentSystemId)) {
+      next.visitOrder.push(next.currentSystemId);
+    }
+    return next;
+  }
+
+  it('exploration costs exploreFuelCost while 2+ nodes remain', () => {
+    const s = placeAtSystemWithNodes(toMap(), 2);
     const sector = currentSector(s, config);
     const node = sector.systems[s.currentSystemId].nodes[0];
     const after = reduce(s, { type: 'EXPLORE', nodeId: node.id }, deps);
@@ -158,12 +180,52 @@ describe('exploration and events', () => {
   });
 
   it('exploration is rejected without enough fuel for it', () => {
-    let s = toMap();
+    let s = placeAtSystemWithNodes(toMap(), 2);
     s = { ...s, fuel: 0.1 };
     const sector = currentSector(s, config);
     const node = sector.systems[s.currentSystemId].nodes[0];
     const after = reduce(s, { type: 'EXPLORE', nodeId: node.id }, deps);
     expect(after).toBe(s);
+  });
+
+  it('the exploration that COMPLETES a system is free (patch2 §5)', () => {
+    let s = placeAtSystemWithNodes(toMap(), 2);
+    s = structuredClone(s);
+    s.fuel = 99;
+    const sector = currentSector(s, config);
+    const here = sector.systems[s.currentSystemId];
+    // Pre-mark all but one node explored (order-independent "last remaining").
+    s.exploredNodeIds.push(...here.nodes.slice(0, -1).map((n) => n.id));
+    const last = here.nodes[here.nodes.length - 1];
+    expect(exploreCost(s, config)).toBe(0);
+    const after = reduce(s, { type: 'EXPLORE', nodeId: last.id }, deps);
+    expect(after.fuel).toBe(s.fuel); // free
+    expect(after.exploredNodeIds).toContain(last.id);
+  });
+
+  it("a single-node system's only exploration is free (flagged edge of the literal rule)", () => {
+    let s = toMap();
+    const sector = currentSector(s, config);
+    const single = sector.systemIds
+      .map((id) => sector.systems[id])
+      .find((sys) => sys.nodes.length === 1);
+    if (!single) return; // this seed rolled no single-node system — rule covered above
+    s = structuredClone(s);
+    s.currentSystemId = single.id;
+    if (!s.visitOrder.includes(single.id)) s.visitOrder.push(single.id);
+    expect(exploreCost(s, config)).toBe(0);
+  });
+
+  it('at 0 fuel with one unexplored node left, the player is NOT stranded — the free closer remains', () => {
+    let s = placeAtSystemWithNodes(toMap(), 2);
+    s = structuredClone(s);
+    const sector = currentSector(s, config);
+    const here = sector.systems[s.currentSystemId];
+    s.exploredNodeIds.push(...here.nodes.slice(0, -1).map((n) => n.id));
+    s.fuel = 0;
+    const last = here.nodes[here.nodes.length - 1];
+    const after = reduce(s, { type: 'EXPLORE', nodeId: last.id }, deps);
+    expect(after).not.toBe(s); // action accepted despite empty tanks
   });
 
   it('exploration advances the Wake by wakeAdvancePerExplore', () => {

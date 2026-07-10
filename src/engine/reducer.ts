@@ -78,6 +78,21 @@ export function jumpCost(
   return config.wakeSpace[approach].fuelCost;
 }
 
+/**
+ * Fuel cost of exploring one node in the current system. The action that
+ * COMPLETES a system — taken when exactly one unexplored node remains — is
+ * free (patch2 §5). "Last remaining" is order-independent: per-node explored
+ * tracking means skipping around doesn't change which action is the closer.
+ * (Deliberate consequence, flagged to designer: a single-node system's only
+ * exploration is also its last, so it's always free.)
+ */
+export function exploreCost(state: RunState, config: GameConfig): number {
+  const sector = currentSector(state, config);
+  const here = sector.systems[state.currentSystemId];
+  const unexplored = here.nodes.filter((n) => !state.exploredNodeIds.includes(n.id)).length;
+  return unexplored === 1 ? 0 : config.exploreFuelCost;
+}
+
 /** Probability of contact when entering Wake-held space via `approach`. */
 export function wakeFightChance(
   config: GameConfig,
@@ -121,8 +136,8 @@ function checkStranded(state: RunState, config: GameConfig): void {
   const sector = currentSector(state, config);
   const here = sector.systems[state.currentSystemId];
   const canExplore =
-    state.fuel >= config.exploreFuelCost &&
-    here.nodes.some((n) => !state.exploredNodeIds.includes(n.id));
+    here.nodes.some((n) => !state.exploredNodeIds.includes(n.id)) &&
+    state.fuel >= exploreCost(state, config);
   if (canExplore) return;
   const canJump = here.links.some((id) => {
     const cost = jumpCost(state, id, config);
@@ -214,10 +229,11 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       const here = sector.systems[next.currentSystemId];
       const node = here.nodes.find((n) => n.id === action.nodeId);
       if (!node || next.exploredNodeIds.includes(node.id)) return state;
-      if (next.fuel < config.exploreFuelCost) return state;
+      const cost = exploreCost(next, config); // 0 when this completes the system
+      if (next.fuel < cost) return state;
 
       // An intra-system exploration jump: costs fuel and nudges the hunt.
-      next.fuel = Math.max(0, next.fuel - config.exploreFuelCost);
+      next.fuel = Math.max(0, next.fuel - cost);
       next.exploredNodeIds.push(node.id);
 
       const pursuit = advanceWake(

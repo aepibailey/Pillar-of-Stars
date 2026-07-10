@@ -6,7 +6,7 @@
  */
 
 import { getEvent } from '../events/engine';
-import { currentSector, jumpCost, wakeFightChance } from '../engine/reducer';
+import { currentSector, exploreCost, jumpCost, wakeFightChance } from '../engine/reducer';
 import type { Store } from '../engine/store';
 import type { RunState, WakeApproach } from '../engine/types';
 import { systemsInCell } from '../galaxy/waypoint';
@@ -195,14 +195,15 @@ export class App {
     const decoded = state.decodedSectorIndexes.includes(state.sectorIndex);
     const inRegion = systemsInCell(sector, sector.waypointCell).some((s) => s.id === here.id);
 
-    const exploreCost = config.exploreFuelCost;
+    const costNow = exploreCost(state, config); // 0 when one node remains
     let html = `<h2>${here.name}${isGate ? ' — JUMP GATE' : ''}</h2>`;
     for (const node of here.nodes) {
       const explored = state.exploredNodeIds.includes(node.id);
-      const canAfford = state.fuel >= exploreCost;
+      const canAfford = state.fuel >= costNow;
+      const costLabel = costNow === 0 ? 'free — last site here' : `${fmt(costNow)} fuel`;
       html += explored
         ? `<button class="done" disabled>${node.name}<span class="sub">surveyed</span></button>`
-        : `<button data-node="${node.id}" ${canAfford ? '' : 'disabled'}>${node.name}<span class="sub">explore · ${fmt(exploreCost)} fuel</span></button>`;
+        : `<button data-node="${node.id}" ${canAfford ? '' : 'disabled'}>${node.name}<span class="sub">explore · ${costLabel}</span></button>`;
     }
     if (isGate) {
       html += decoded
