@@ -111,3 +111,19 @@ Running record of significant technical decisions and why. Newest sessions at th
 
 - **Next**: designer replay of the patched build; then M2 — The Knife Fight (ship subsystems, power management, combat vs 3 archetypes), swapping the wake-fight placeholder at its marked seam.
 - **Needed**: playtest feedback on the new economy (does 0.25/explore make searching feel like spending?), and the standing gate-locked-until-ruin ruling.
+
+---
+
+## Session 4 — 2026-07-10 · M1 playtest patch 2
+
+### What changed
+
+1. **Homeworld art (slide 1)**: carved bays/lakes into the continent silhouettes with ocean-colored bites (the ocean gradient moved to userSpaceOnUse so carve fills match the water exactly), added peninsulas, multiple green shades plus arid interior belts, and irregular ice caps at both poles.
+2. **The Ancients slides**: two new frames close the intro — the lore beat (a race vanished tens of millennia ago; centuries of coreward expeditions; "only ever more ruins") and the gut-feeling bridge at the excavation rim. **Placement call**: end of the sequence, directly before The Buried Door, so "this time is different" is the final line before the player recovers the data-core. Slide 5's text was trimmed so the Ascended aren't introduced twice.
+3. **BUG FIX — unreliable system selection.** Root cause: **stale hit-test geometry**. The render pass drew the map _before_ re-rendering the panel, so whenever the panel's height changed (node lists and hints differ per system) or the mobile URL bar collapsed, the canvas was resized _after_ the draw — leaving the stored hit circles offset from the pixels. Taps then missed until some lucky tap (e.g. on the player's own marker, a large target) forced a redraw — exactly the reported "tap your current location first, then it works." Not a listener leak; the listener was fine. Fix is three layers: (a) the map now draws LAST in the render pass, measuring the settled layout; (b) a ResizeObserver on the canvas redraws on any CSS box change; (c) the tap handler compares the live canvas size against the geometry's recorded size and redraws before hit-testing if stale.
+4. **Wake tuning**: intra-system exploration advance 0.2 → 0.1 jumps (config-only change).
+5. **Free final exploration.** **"Last remaining node" definition (confirmed against tracking logic)**: exploration is tracked per node id, so "last" = exactly one unexplored node remaining in the current system at the moment of the action — order-independent; skipping nodes changes nothing. No ambiguity found. **Deliberate edge, flagged**: a single-node system's only exploration is also "the action that completes the system," so it's always free (~a quarter of systems roll 1 node). If that reads as a loophole, the alternative is "free only if the player already paid ≥1 explore here" — one-line change. Free closers still advance the Wake 0.1; only fuel is waived. Side benefit: the "adrift at 0 fuel, one last site to scavenge" desperation beat from M1 is partially restored.
+
+### Verification
+
+91 tests green (new: free-closer cost, single-node edge, not-stranded-at-zero-fuel-with-free-closer); build + lint clean; smoke run at 390×844 through the full 7-frame intro → opener → map → event → reload-resume with zero console errors.

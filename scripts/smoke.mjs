@@ -19,8 +19,8 @@ await page.goto(`${BASE}/?seed=SMOKE-1`);
 await page.waitForTimeout(400);
 await page.screenshot({ path: `${OUT}/1-intro.png` });
 
-// Walk the whole intro (5 frames)
-for (let i = 0; i < 5; i++) {
+// Walk the whole intro (frame count comes from data/intro.json)
+for (let i = 0; i < 12; i++) {
   const btn = page.locator('[data-act="next"]');
   if ((await btn.count()) === 0) break;
   await btn.click();
