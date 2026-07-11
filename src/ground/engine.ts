@@ -51,6 +51,8 @@ export interface StartGroundArgs {
   seed: string;
   encounterId: string;
   config: GroundConfig;
+  /** Salvage carried from the disabled ship, paid out if the boarding succeeds. */
+  reward: { scrap: number; fuel: number };
 }
 
 export function startGround(args: StartGroundArgs): GroundState {
@@ -113,6 +115,7 @@ export function startGround(args: StartGroundArgs): GroundState {
     encounterName: args.encounterName,
     origin: 'boarding',
     items: config.items.map((it) => ({ id: it.id, count: 1 })),
+    reward: args.reward,
   };
 }
 

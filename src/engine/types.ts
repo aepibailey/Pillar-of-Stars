@@ -9,8 +9,9 @@
  */
 
 import type { CombatConfig, CombatShip, CombatState, SubsystemId } from '../combat/types';
+import type { GroundState } from '../ground/types';
 
-export type Phase = 'intro' | 'map' | 'event' | 'combat' | 'dead' | 'won';
+export type Phase = 'intro' | 'map' | 'event' | 'combat' | 'ground' | 'dead' | 'won';
 
 /**
  * 'wake'      — the front caught the player.
@@ -19,7 +20,7 @@ export type Phase = 'intro' | 'map' | 'event' | 'combat' | 'dead' | 'won';
  * 'destroyed' — hull reached zero in ship combat (M2).
  * ('adrift'/'destroyed' lose the ship entirely, so §6.4 succession can't apply.)
  */
-export type DeathCause = 'wake' | 'adrift' | 'robbed' | 'destroyed';
+export type DeathCause = 'wake' | 'adrift' | 'robbed' | 'destroyed' | 'boarding';
 
 export interface Character {
   id: string;
@@ -100,6 +101,8 @@ export interface RunState {
   activeEvent: ActiveEvent | null;
   /** Active ship fight, or null. Its own RNG cursor rides inside it (§7.1). */
   combat: CombatState | null;
+  /** Active boarding / personal-combat scene, or null (§7.2/7.3). */
+  ground: GroundState | null;
   /** Days waited in the CURRENT stranding (resets when the stranding ends). */
   strandedDays: number;
   stats: RunStats;

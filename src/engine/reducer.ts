@@ -10,6 +10,7 @@ import { combatReduce, effLevel, makeCombatShip, startCombat } from '../combat/e
 import type {
   CombatAction,
   CombatOrigin,
+  CombatState,
   EnemyArchetype,
   PlayerShipDef,
   SubsystemId,
@@ -20,14 +21,18 @@ import type { EventDef, EventEffects } from '../events/types';
 import { getSector } from '../galaxy/generate';
 import { nearestStationSystemId } from '../galaxy/search';
 import type { Sector } from '../galaxy/types';
+import { groundReduce, startGround } from '../ground/engine';
+import type { GroundAction, GroundConfig } from '../ground/types';
+import { THREAT_ORDER } from '../threat/sensor';
 import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
 import type { Character, GameConfig, RunState, ShipState, WakeApproach } from './types';
 
+// v7: boarding / personal combat (RunState.ground + 'ground' phase).
 // v6: sensor-scaled threat read (combat carries a per-encounter readSeed).
 // v5: point-defense subsystem (targetable PD + saturating salvos).
 // v4: ship subsystem model + combat (was v3: strandedDays / Wait-1-Day).
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -40,6 +45,9 @@ export type Action =
   | { type: 'WAIT_DAY' }
   | { type: 'COMBAT_ACTION'; combatAction: CombatAction }
   | { type: 'COMBAT_ACK' }
+  | { type: 'BOARD' } // dock a disabled ship → personal combat (§7.3)
+  | { type: 'GROUND_ACTION'; groundAction: GroundAction }
+  | { type: 'GROUND_ACK' }
   | { type: 'REPAIR'; target: 'hull' | SubsystemId };
 
 export interface Deps {
@@ -50,6 +58,8 @@ export interface Deps {
   playerDef: PlayerShipDef;
   /** Brutal name pool for Wake vessels (§9.1); separate from other factions. */
   wakeShipNames: readonly string[];
+  /** Personal-combat tuning + boarding scenario data (§7.2). */
+  ground: GroundConfig;
 }
 
 /** Build a fresh player ship (§5) from the data-driven class definition. */
@@ -89,6 +99,7 @@ export function createRun(seed: string, config: GameConfig, ship: ShipState): Ru
     wake: createWakeState(config.wakeGraceJumps),
     activeEvent: null,
     combat: null,
+    ground: null,
     strandedDays: 0,
     stats: { jumps: 0, eventsResolved: 0, combats: 0 },
     rngState: { events: deriveSeed(seed, 'events') },
@@ -269,6 +280,77 @@ function launchCombat(
   state.phase = 'combat';
 }
 
+/** Persist the fought ship back to the run (hull/subsystem damage/ammo), resetting
+ * combat-transient fields. Shared by ship-fight resolution and boarding. */
+function persistShip(state: RunState, player: ShipState): void {
+  state.ship = {
+    ...player,
+    power: { engines: 0, weapons: 0, shields: 0 },
+    shieldLayers: 0,
+    fleeCharge: 0,
+  };
+}
+
+/** A ship is boardable once its weapons AND engines are both disabled (§7.3). */
+export function canBoard(c: CombatState): boolean {
+  return (
+    c.outcome === 'ongoing' &&
+    effLevel(c.enemy.subsystems.weapons) <= 0 &&
+    effLevel(c.enemy.subsystems.engines) <= 0
+  );
+}
+
+/** Dock the disabled ship and launch personal combat in its corridors (§7.3). */
+function launchBoarding(state: RunState, deps: Deps): void {
+  const c = state.combat as CombatState;
+  persistShip(state, c.player);
+  const idx = THREAT_ORDER.indexOf(c.enemyThreat as (typeof THREAT_ORDER)[number]);
+  state.ground = startGround({
+    threat: c.enemyThreat,
+    foeCount: 2 + (idx < 0 ? 0 : idx), // matches the sensor manifest read
+    encounterName: c.enemy.name,
+    seed: state.seed,
+    encounterId: `${state.stats.combats}b`,
+    config: deps.ground,
+    reward: { scrap: c.salvageScrap, fuel: c.salvageFuel },
+  });
+  state.combat = null;
+  state.phase = 'ground';
+}
+
+/** Apply a resolved boarding back to the run (§7.3 paths). */
+function applyGroundResult(state: RunState, config: GameConfig): void {
+  const g = state.ground;
+  if (!g || g.outcome === 'ongoing') return;
+
+  if (g.outcome === 'captain-down') {
+    state.ground = null;
+    state.phase = 'dead';
+    state.deathCause = 'boarding';
+    return;
+  }
+  if (g.outcome === 'neutralized') {
+    // Full salvage, but hardware got shot up and some factions remember massacres.
+    state.scrap += g.reward.scrap + 2;
+    state.fuel += g.reward.fuel;
+    state.flags.boardedMassacre = true;
+  } else if (g.outcome === 'subdued') {
+    // Harder to pull off, but prisoners + an intact hold pay better.
+    state.scrap += g.reward.scrap + 4;
+    state.fuel += g.reward.fuel;
+    state.flags.tookPrisoners = true;
+  } else if (g.outcome === 'allied') {
+    // They stand down: less loot, but goodwill/intel banked for later systems.
+    state.scrap += Math.floor(g.reward.scrap / 2);
+    state.fuel += g.reward.fuel + 1;
+    state.flags.alliedBoarding = true;
+  }
+  // 'withdrawn' → left the hull adrift, no reward.
+  state.ground = null;
+  state.phase = 'map';
+  checkStranded(state, config);
+}
+
 /** Apply a resolved fight back to the run: writeback ship, salvage, or death. */
 function applyCombatResult(state: RunState, config: GameConfig): void {
   const c = state.combat;
@@ -281,13 +363,7 @@ function applyCombatResult(state: RunState, config: GameConfig): void {
     return;
   }
 
-  // Persist hull, subsystem damage, and spent ammo; reset combat-transient fields.
-  state.ship = {
-    ...c.player,
-    power: { engines: 0, weapons: 0, shields: 0 },
-    shieldLayers: 0,
-    fleeCharge: 0,
-  };
+  persistShip(state, c.player);
   if (c.outcome === 'won') {
     state.scrap += c.salvageScrap;
     state.fuel += c.salvageFuel;
@@ -555,6 +631,28 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         return state;
       }
       applyCombatResult(next, config);
+      return next;
+    }
+
+    case 'BOARD': {
+      if (next.phase !== 'combat' || !next.combat || !canBoard(next.combat)) return state;
+      launchBoarding(next, deps);
+      return next;
+    }
+
+    case 'GROUND_ACTION': {
+      if (next.phase !== 'ground' || !next.ground || next.ground.outcome !== 'ongoing') {
+        return state;
+      }
+      next.ground = groundReduce(next.ground, action.groundAction, deps.ground);
+      return next;
+    }
+
+    case 'GROUND_ACK': {
+      if (next.phase !== 'ground' || !next.ground || next.ground.outcome === 'ongoing') {
+        return state;
+      }
+      applyGroundResult(next, config);
       return next;
     }
 

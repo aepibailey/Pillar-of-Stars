@@ -81,6 +81,8 @@ export interface GroundState {
   origin: 'boarding';
   /** The captain's consumables for this scene (minimal M3 kit). */
   items: { id: string; count: number }[];
+  /** Salvage on the table if the boarding succeeds (carried from the ship fight). */
+  reward: { scrap: number; fuel: number };
 }
 
 /** A player decision for one personal-combat turn (one save point). */

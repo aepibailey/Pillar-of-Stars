@@ -1,12 +1,14 @@
 import configJson from '../data/config.json';
 import enemiesJson from '../data/enemies.json';
 import eventsJson from '../data/events/core.json';
+import groundJson from '../data/ground.json';
 import introJson from '../data/intro.json';
 import namesWakeJson from '../data/names-wake.json';
 import shipPlayerJson from '../data/ship-player.json';
 import tutorialCombatJson from '../data/tutorial-combat.json';
 import weaponsJson from '../data/weapons.json';
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from './combat/types';
+import type { GroundConfig } from './ground/types';
 import { buildPlayerShip, createRun, type Deps } from './engine/reducer';
 import { loadRun } from './engine/save';
 import { Store } from './engine/store';
@@ -25,7 +27,8 @@ const weapons = weaponsJson as WeaponDef[];
 const enemies = enemiesJson as unknown as EnemyArchetype[];
 const playerDef = shipPlayerJson as unknown as PlayerShipDef;
 const wakeShipNames = (namesWakeJson as { wakeShips: string[] }).wakeShips;
-const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames };
+const ground = (groundJson as { config: GroundConfig }).config;
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground };
 const introFrames = (introJson as { frames: IntroFrame[] }).frames;
 const tutorialCombat = (tutorialCombatJson as { steps: TutorialStep[] }).steps;
 

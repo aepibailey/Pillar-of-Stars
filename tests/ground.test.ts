@@ -20,6 +20,7 @@ function scene(overrides: Partial<StartGroundArgs> = {}): GroundState {
     seed: 'ground-seed',
     encounterId: '0',
     config,
+    reward: { scrap: 5, fuel: 2 },
     ...overrides,
   });
 }
@@ -51,7 +52,15 @@ describe('startGround', () => {
 });
 
 function base(): StartGroundArgs {
-  return { threat: 'GREEN', foeCount: 1, encounterName: 'x', seed: 's', encounterId: '0', config };
+  return {
+    threat: 'GREEN',
+    foeCount: 1,
+    encounterName: 'x',
+    seed: 's',
+    encounterId: '0',
+    config,
+    reward: { scrap: 5, fuel: 2 },
+  };
 }
 
 describe('resolution', () => {

@@ -821,6 +821,8 @@ export class App {
         'They wanted the ship more than you could afford to keep it. The boarding party works methodically through the corridors, and the last light aboard is the glow of their cutting torches.',
       destroyed:
         'The hull comes apart around you in the cold and the quiet. Somewhere, a debris field spreads where a ship used to be — and the map you carried scatters with it.',
+      boarding:
+        'The corridor fight turns against you in a spray of blaster light. The captain falls among strangers, aboard a ship that was never home — and the journey has no one left to carry it on.',
     }[state.deathCause ?? 'adrift'];
     const title = won ? 'SECTOR 3 — THE ROAD GOES ON' : 'THE JOURNEY ENDS';
     const body = won

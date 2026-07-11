@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { weapons, enemies, playerDef, wakeShipNames, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, ground, newShip } from './fixtures';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
 import { createRun, reduce, type Deps } from '../src/engine/reducer';
@@ -87,6 +87,7 @@ describe('wakeAdvance effect integration', () => {
     enemies,
     playerDef,
     wakeShipNames,
+    ground,
   };
 
   function toMapRigged(): RunState {

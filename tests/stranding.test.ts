@@ -1,4 +1,4 @@
-import { weapons, enemies, playerDef, wakeShipNames, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, ground, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -11,7 +11,7 @@ import type { Sector } from '../src/galaxy/types';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames };
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground };
 
 /** A run stranded at its entry system: fuel 0, everything here surveyed. */
 function strandedState(seed = 'stranding-seed'): RunState {
