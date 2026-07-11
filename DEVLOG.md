@@ -340,3 +340,37 @@ The interception and the landed hit were **already logged**, so there was no sil
 
 - **PD is flat and target-based.** If you'd rather it scale with salvo size (saturating point defense — fire 4 missiles, the 4th is likelier to leak) or with a dedicated enemy PD subsystem the player can ion-disable, that's a mechanic change, not just a display one — flag it and I'll rework `resolveHit`. Today it's one independent roll per missile.
 - The rough band thresholds (≤0.15 low, ≤0.35 moderate, else high) are a first cut; easy to retune.
+
+---
+
+## Session 11 — 2026-07-11 · Point defense becomes a targetable subsystem (+ saturating salvos)
+
+### #1 finding (reported before building)
+
+Point defense was **not modeled as a subsystem** and was **not tied to Weapons**. It was a single flat float `pdChance` (0–1) on the ship, rolled per missile in `resolveHit`, fully independent of every subsystem — so nothing the player could target suppressed it. (Also corrected the record: the "saturating rework" wasn't actually in progress; Session 10 shipped only PD *transparency* + the green first fight. So this session built saturation **and** the targetable subsystem together.)
+
+### The final model
+
+PD now has **two separated knobs**:
+- **Capacity** = the new **`pointDefense` subsystem**'s effective level = how many incoming warheads it can *engage per turn* (the saturation cap).
+- **Quality** = the existing `pdChance` = odds each *engaged* warhead is actually shot down.
+
+**Resolution (`src/combat/engine.ts`):** each volley opens with a per-turn budget `pd.left = pdCapacity(defender)` (= `effLevel(pointDefense)`), threaded through the whole volley. Missiles resolve in order; each one, while budget remains, spends 1 and rolls `pdChance`. Once budget is spent, further warheads that turn **auto-leak**. Missiles also gained a **`salvo`** (warheads per shot, each an independent roll + capacity draw; 1 ammo per shot). The budget is a live counter fixed at volley start, so an ion hit landing earlier in the *same* simultaneous volley can't shrink capacity mid-flight — it bites next turn. No new serialized `CombatState` field; the only save-shape change is the extra subsystem key, so **`SCHEMA_VERSION` 4 → 5** (old saves cleanly discarded).
+
+**Two viable paths (the point of the task):**
+- **Cripple:** target `pointDefense` (ion is ideal) → capacity drops → at 0 every missile lands unopposed.
+- **Saturate:** fire a salvo larger than capacity → the overflow leaks even against full-health PD.
+
+**Starting numbers (tunable):** capacity — scavenger 0, gunship 1, shield-fortress 2, **missile-boat 2**, player 2. Quality `pdChance` unchanged. Missile Rack: **damage 5 → 2, salvo 3** (so total on-target is comparable but now interacts with PD); enemy Warhead Launcher stays single-warhead.
+
+**Two design calls I made** (AskUserQuestion tooling failed, and you'd said "continue"): (a) gave the starter Missile Rack a **salvo of 3** so the saturate path is real *now* with one weapon — otherwise saturation only mattered once you owned multiple launchers; (b) PD damage reduces **capacity only**, not per-warhead quality — one clean lever, matching your "reduce saturation capacity" framing. Both are one-line tunes if you'd prefer otherwise.
+
+### #3 transparency
+
+- `pointDefense` is a first-class targetable subsystem: new **PD** target chip on every weapon row, a subsystem row in the Ship-stats sheet, and a live **`point defense N/M`** readout on the enemy box (2/2 undamaged, 1/2 damaged, 0/2 → "(disabled)"; ships with none say "no point defense").
+- Missile lines show a capacity-aware **intercept risk** (`none — PD down` / low / moderate / high, plus "· salvo overwhelms" when your salvo already beats their capacity).
+- **Four distinct log lines** for a warhead's fate: "shot down by point defense" / "beats point defense, strikes X" / "point defense is down, strikes X unopposed" / "overwhelms saturated point defense, strikes X" — so the player always knows *why* one got through (crippled vs. saturated intact PD). Explain sheet rewritten with a "Point defense (and how to beat it)" section.
+
+### Verification
+
+154 tests (4 new: full intercept when capacity ≥ salvo; disabled PD → whole salvo unopposed + log; salvo > capacity saturates with the overflow leaking at pdChance 1 + log; ion targets & damages the PD subsystem). Build + tsc + lint clean. Combat UI verified at 390×844: the 5-target row (incl. PD) fits, the green first fight shows "no point defense" + "intercept risk none — PD down". Existing interception tests updated for the capacity model.

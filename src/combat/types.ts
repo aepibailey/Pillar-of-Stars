@@ -20,10 +20,25 @@ export interface WeaponDef {
   shieldStrip?: number;
   /** Turns of recharge between shots (0 = every turn). */
   cooldown?: number;
+  /**
+   * Missiles only: how many warheads one shot launches. Each rolls independently
+   * against the target's point defense, and each spends one unit of PD capacity —
+   * so a salvo bigger than the enemy's PD capacity overwhelms it (some leak through
+   * even intact PD). Defaults to 1. Costs one ammo per shot regardless of salvo.
+   */
+  salvo?: number;
 }
 
 export type SubsystemId =
-  'reactor' | 'engines' | 'weapons' | 'shields' | 'sensors' | 'lifeSupport' | 'medbay' | 'comms';
+  | 'reactor'
+  | 'engines'
+  | 'weapons'
+  | 'shields'
+  | 'sensors'
+  | 'pointDefense'
+  | 'lifeSupport'
+  | 'medbay'
+  | 'comms';
 
 /** A shot targets a subsystem to disable it, or the hull for the raw kill. */
 export type TargetId = SubsystemId | 'hull';
@@ -34,13 +49,14 @@ export const SUBSYSTEM_IDS: SubsystemId[] = [
   'weapons',
   'shields',
   'sensors',
+  'pointDefense',
   'lifeSupport',
   'medbay',
   'comms',
 ];
 
 /** Subsystems a shot can meaningfully target in M2 combat. */
-export const TARGETABLE: TargetId[] = ['hull', 'weapons', 'engines', 'shields'];
+export const TARGETABLE: TargetId[] = ['hull', 'weapons', 'engines', 'shields', 'pointDefense'];
 
 export interface Subsystem {
   level: number;

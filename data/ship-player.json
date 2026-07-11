@@ -8,6 +8,7 @@
     "weapons": 3,
     "shields": 2,
     "sensors": 2,
+    "pointDefense": 2,
     "lifeSupport": 1,
     "medbay": 1,
     "comms": 1

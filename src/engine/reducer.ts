@@ -24,8 +24,9 @@ import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
 import type { Character, GameConfig, RunState, ShipState, WakeApproach } from './types';
 
+// v5: point-defense subsystem (targetable PD + saturating salvos).
 // v4: ship subsystem model + combat (was v3: strandedDays / Wait-1-Day).
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }

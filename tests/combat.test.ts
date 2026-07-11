@@ -224,10 +224,12 @@ describe('weapon mechanics vs defenses (§7.1)', () => {
     expect(after.enemy.hull).toBeLessThan(before);
   });
 
-  it('point defense can intercept missiles (pdChance=1 always intercepts)', () => {
+  it('point defense intercepts every engaged warhead (pdChance=1, capacity >= salvo)', () => {
     const s = fight('gunship');
     s.enemy.shieldLayers = 0;
     s.enemy.pdChance = 1;
+    // Capacity must cover the whole salvo, or the overflow saturates through.
+    s.enemy.subsystems.pointDefense = { level: 5, damage: 0 };
     const before = s.enemy.hull;
     const after = combatReduce(
       s,
@@ -239,7 +241,69 @@ describe('weapon mechanics vs defenses (§7.1)', () => {
       weaponDefs,
       combatConfig,
     );
-    expect(after.enemy.hull).toBe(before); // intercepted
+    expect(after.enemy.hull).toBe(before); // whole salvo shot down
+  });
+
+  it('disabled point defense (capacity 0) lets the whole salvo through, pdChance be damned', () => {
+    const s = fight('gunship');
+    s.enemy.shieldLayers = 0;
+    s.enemy.pdChance = 1; // quality is irrelevant with no capacity to engage
+    s.enemy.subsystems.pointDefense = { level: 2, damage: 2 }; // effLevel 0
+    const before = s.enemy.hull;
+    const after = combatReduce(
+      s,
+      {
+        type: 'FIRE',
+        power: { engines: 0, weapons: 1, shields: 0 },
+        targets: targets({ [MIS]: 'hull' }),
+      },
+      weaponDefs,
+      combatConfig,
+    );
+    const salvo = weaponDefs.find((w) => w.id === 'missile-rack')!.salvo!;
+    const dmg = weaponDefs.find((w) => w.id === 'missile-rack')!.damage;
+    expect(after.enemy.hull).toBe(before - salvo * dmg); // every warhead lands
+    expect(after.log.some((l) => l.includes('point defense is down'))).toBe(true);
+  });
+
+  it('a salvo larger than PD capacity saturates it — the overflow leaks even at pdChance=1', () => {
+    const s = fight('gunship');
+    s.enemy.shieldLayers = 0;
+    s.enemy.pdChance = 1; // every ENGAGED warhead is downed
+    s.enemy.subsystems.pointDefense = { level: 1, damage: 0 }; // capacity 1 < salvo
+    const before = s.enemy.hull;
+    const after = combatReduce(
+      s,
+      {
+        type: 'FIRE',
+        power: { engines: 0, weapons: 1, shields: 0 },
+        targets: targets({ [MIS]: 'hull' }),
+      },
+      weaponDefs,
+      combatConfig,
+    );
+    const salvo = weaponDefs.find((w) => w.id === 'missile-rack')!.salvo!;
+    const dmg = weaponDefs.find((w) => w.id === 'missile-rack')!.damage;
+    // Exactly `capacity` warheads engaged+downed; the rest (salvo-1) leak through.
+    expect(after.enemy.hull).toBe(before - (salvo - 1) * dmg);
+    expect(after.log.some((l) => l.includes('overwhelms saturated point defense'))).toBe(true);
+  });
+
+  it('ion can target and damage point defense (the cripple path)', () => {
+    const s = fight('missile-boat');
+    s.enemy.shieldLayers = 0;
+    const before = s.enemy.subsystems.pointDefense.damage;
+    const after = combatReduce(
+      s,
+      {
+        type: 'FIRE',
+        power: { engines: 0, weapons: 1, shields: 0 },
+        targets: targets({ [ION]: 'pointDefense' }),
+      },
+      weaponDefs,
+      combatConfig,
+    );
+    expect(after.enemy.subsystems.pointDefense.damage).toBeGreaterThan(before);
   });
 
   it('ion deals no hull damage — it disables a subsystem', () => {

@@ -13,10 +13,13 @@
       "sensors": 1,
       "lifeSupport": 1,
       "medbay": 0,
-      "comms": 0
+      "comms": 0,
+      "pointDefense": 0
     },
     "pdChance": 0.1,
-    "weapons": ["enemy-slugthrower"],
+    "weapons": [
+      "enemy-slugthrower"
+    ],
     "doctrine": "aggressive",
     "salvageScrap": 2,
     "salvageFuel": 0,
@@ -37,10 +40,14 @@
       "sensors": 1,
       "lifeSupport": 1,
       "medbay": 0,
-      "comms": 1
+      "comms": 1,
+      "pointDefense": 1
     },
     "pdChance": 0.2,
-    "weapons": ["enemy-slugthrower", "enemy-slugthrower"],
+    "weapons": [
+      "enemy-slugthrower",
+      "enemy-slugthrower"
+    ],
     "doctrine": "aggressive",
     "salvageScrap": 4,
     "salvageFuel": 1,
@@ -61,10 +68,14 @@
       "sensors": 1,
       "lifeSupport": 1,
       "medbay": 0,
-      "comms": 1
+      "comms": 1,
+      "pointDefense": 2
     },
     "pdChance": 0.5,
-    "weapons": ["enemy-missile", "enemy-missile"],
+    "weapons": [
+      "enemy-missile",
+      "enemy-missile"
+    ],
     "doctrine": "bombard",
     "salvageScrap": 5,
     "salvageFuel": 2,
@@ -85,10 +96,14 @@
       "sensors": 2,
       "lifeSupport": 1,
       "medbay": 0,
-      "comms": 1
+      "comms": 1,
+      "pointDefense": 2
     },
     "pdChance": 0.3,
-    "weapons": ["enemy-slugthrower", "enemy-heavy-laser"],
+    "weapons": [
+      "enemy-slugthrower",
+      "enemy-heavy-laser"
+    ],
     "doctrine": "grind",
     "salvageScrap": 7,
     "salvageFuel": 2,

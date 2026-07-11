@@ -98,6 +98,17 @@ export function evasion(ship: CombatShip, config: CombatConfig): number {
   return Math.max(0, Math.min(config.maxEvasion, raw));
 }
 
+/**
+ * Point-defense capacity: how many incoming missiles this ship can ENGAGE per
+ * turn (§7.1). It's the effective level of the pointDefense subsystem, so ion
+ * (or any subsystem hit) shrinks it and a disabled PD engages nothing. A salvo
+ * larger than the capacity overwhelms it — the overflow leaks even against
+ * intact PD. Each engaged missile still rolls `pdChance` to actually be killed.
+ */
+export function pdCapacity(ship: CombatShip): number {
+  return effLevel(ship.subsystems.pointDefense);
+}
+
 function maxShieldLayers(ship: CombatShip): number {
   return Math.min(effLevel(ship.subsystems.shields), ship.power.shields);
 }
@@ -244,6 +255,13 @@ function fireVolley(
   // resolution) — so damage from the other side can't retroactively change
   // which of these weapons fire. Every targeted weapon reports SOMETHING; an
   // untargeted weapon ('hold') is silent by design (you chose not to fire it).
+  //
+  // Point defense is a per-turn budget shared across the whole volley: this
+  // defender can ENGAGE at most `pdCapacity` incoming missiles this turn, no
+  // matter how many are launched. It's a live counter (not turn-start) so an
+  // ion hit landing earlier in the SAME volley can't shrink it mid-flight —
+  // capacity for the turn is fixed here, then drawn down missile by missile.
+  const pd = { left: pdCapacity(defender) };
   attacker.weapons.forEach((slot, i) => {
     const def = weaponDef(weaponDefs, slot.defId);
     switch (plan[i]) {
@@ -266,10 +284,15 @@ function fireVolley(
       case 'fire':
         if (slot.ammo > 0) slot.ammo -= 1;
         slot.cooldownLeft = def.cooldown ?? 0;
-        resolveHit(def, defender, targets[i] as TargetId, config, rng, log, attackerLabel);
+        resolveHit(def, defender, targets[i] as TargetId, config, rng, log, attackerLabel, pd);
         return;
     }
   });
+}
+
+/** Mutable per-volley point-defense budget (intercept attempts left this turn). */
+interface PdBudget {
+  left: number;
 }
 
 function resolveHit(
@@ -280,14 +303,15 @@ function resolveHit(
   rng: Rng,
   log: string[],
   attackerLabel: string,
+  pd: PdBudget,
 ): void {
   if (def.type === 'missile') {
-    if (rng.next() < target.pdChance) {
-      log.push(`${attackerLabel}'s ${def.name} — shot down by point defense.`);
-      return;
+    const salvo = Math.max(1, def.salvo ?? 1);
+    const label = `${attackerLabel}'s ${def.name}`;
+    const prefix = salvo > 1 ? `${label} salvo` : label;
+    for (let m = 0; m < salvo; m++) {
+      resolveMissile(def, target, targetId, config, rng, log, prefix, pd);
     }
-    applyDamage(target, def.damage, targetId, config);
-    log.push(`${attackerLabel}'s ${def.name} — slips past point defense and shields, strikes ${targetId}.`);
     return;
   }
 
@@ -330,6 +354,43 @@ function resolveHit(
   const sid: TargetId = targetId === 'hull' ? 'weapons' : targetId;
   target.subsystems[sid].damage += def.damage;
   log.push(`${attackerLabel}'s ${def.name} overloads ${sid}.`);
+}
+
+/**
+ * One missile resolving against point defense (§7.1). Missiles ignore shields —
+ * the only thing between them and the hull is PD, and PD can engage only
+ * `pdCapacity` of them per turn. The log distinguishes WHY each missile got
+ * through so the two counter-strategies read clearly: crippling PD (capacity 0)
+ * vs. saturating an intact PD (more missiles than it can engage).
+ */
+function resolveMissile(
+  def: WeaponDef,
+  target: CombatShip,
+  targetId: TargetId,
+  config: CombatConfig,
+  rng: Rng,
+  log: string[],
+  label: string,
+  pd: PdBudget,
+): void {
+  if (pd.left > 0) {
+    // PD engages this warhead — it spends capacity whether or not it connects.
+    pd.left -= 1;
+    if (rng.next() < target.pdChance) {
+      log.push(`${label} — shot down by point defense.`);
+      return;
+    }
+    applyDamage(target, def.damage, targetId, config);
+    log.push(`${label} — beats point defense, strikes ${targetId}.`);
+    return;
+  }
+  // No PD capacity left for this warhead. Two very different reasons:
+  applyDamage(target, def.damage, targetId, config);
+  if (pdCapacity(target) <= 0) {
+    log.push(`${label} — point defense is down, strikes ${targetId} unopposed.`);
+  } else {
+    log.push(`${label} — overwhelms saturated point defense, strikes ${targetId}.`);
+  }
 }
 
 /** Enemy doctrine: pick a target for every ready weapon. */

@@ -21,10 +21,11 @@
     "id": "missile-rack",
     "name": "Missile Rack",
     "type": "missile",
-    "damage": 5,
+    "damage": 2,
     "powerCost": 1,
     "ammo": 4,
-    "cooldown": 1
+    "cooldown": 1,
+    "salvo": 3
   },
   {
     "id": "ion-blaster",

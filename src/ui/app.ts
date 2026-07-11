@@ -5,7 +5,7 @@
  * is canvas.
  */
 
-import { clampPower, effLevel, planVolley, reactorOutput } from '../combat/engine';
+import { clampPower, effLevel, pdCapacity, planVolley, reactorOutput } from '../combat/engine';
 import type {
   CombatShip,
   CombatState,
@@ -40,16 +40,23 @@ const TARGET_CHOICES: { id: TargetId; short: string }[] = [
   { id: 'weapons', short: 'Wpn' },
   { id: 'engines', short: 'Eng' },
   { id: 'shields', short: 'Shd' },
+  { id: 'pointDefense', short: 'PD' },
 ];
 
 /**
- * Rough point-defense read from a ship's flat intercept chance (§7.1). Deliberately
- * a word band, not a percentage — a precise probability is sensor-tier (M3).
+ * Rough pre-fire intercept read for one of your missiles vs an enemy's point
+ * defense (§7.1). Factors both PD capacity (how many warheads it can engage) and
+ * its per-warhead quality (pdChance) against this weapon's salvo size — but stays
+ * a word band, never a precise %, since exact odds are sensor-tier (M3).
  */
-function pdBand(chance: number): 'low' | 'moderate' | 'high' {
-  if (chance <= 0.15) return 'low';
-  if (chance <= 0.35) return 'moderate';
-  return 'high';
+function missileInterceptRead(enemy: CombatShip, def: WeaponDef): string {
+  const cap = pdCapacity(enemy);
+  if (cap <= 0) return 'none — PD down';
+  const salvo = Math.max(1, def.salvo ?? 1);
+  const coverage = Math.min(cap, salvo) / salvo; // fraction of the salvo PD can engage
+  const effective = coverage * enemy.pdChance; // rough expected fraction stopped
+  const band = effective <= 0.12 ? 'low' : effective <= 0.3 ? 'moderate' : 'high';
+  return salvo > cap ? `${band} · salvo overwhelms` : band;
 }
 
 export interface IntroFrame {
@@ -259,12 +266,13 @@ export class App {
     const ship = state.ship;
     const config = this.store.getDeps().config;
     const weapons = this.store.getDeps().weapons;
-    const rows = (['reactor', 'engines', 'weapons', 'shields', 'sensors'] as const)
+    const rows = (['reactor', 'engines', 'weapons', 'shields', 'sensors', 'pointDefense'] as const)
       .map((id) => {
         const sub = ship.subsystems[id];
         const eff = Math.max(0, sub.level - sub.damage);
         const dmg = sub.damage > 0 ? ` <span class="warn">(−${sub.damage} dmg)</span>` : '';
-        return `<div class="statrow"><span>${id}</span><b>${eff}/${sub.level}</b>${dmg}</div>`;
+        const label = id === 'pointDefense' ? 'point defense' : id;
+        return `<div class="statrow"><span>${label}</span><b>${eff}/${sub.level}</b>${dmg}</div>`;
       })
       .join('');
     const wlist = ship.weapons
@@ -304,10 +312,14 @@ export class App {
         <h2>The weapon types</h2>
         <p>• <b>Kinetic</b> — cheap, limited ammo. Shield layers soak it; useless until shields are down.
         <br>• <b>Laser</b> — power-hungry, strips shield layers fast and burns through once they're gone. Your shield-breaker.
-        <br>• <b>Missile</b> — ignores shields entirely, but the enemy's <b>point defense</b> may shoot it down. Each missile rolls on its own. Limited ammo.
-        <br>• <b>Ion</b> — does no hull damage; it disables an enemy subsystem for a while. A setup weapon.</p>
-        <h2>Point defense</h2>
-        <p>Every ship has point defense that can <b>shoot down incoming missiles</b> — nothing else. The enemy box shows a rough <b>point defense</b> rating, and each of your missile lines shows the matching <b>intercept risk</b> (low / moderate / high). It's only a read, not a promise: the combat log always tells you whether a missile was shot down or slipped through.</p>
+        <br>• <b>Missile</b> — ignores shields entirely; a whole <b>salvo</b> of warheads on one shot. Only point defense can stop them. Limited ammo.
+        <br>• <b>Ion</b> — does no hull damage; it disables an enemy subsystem for a while. A setup weapon — and your key to point defense (below).</p>
+        <h2>Point defense (and how to beat it)</h2>
+        <p><b>Point defense (PD)</b> is a targetable subsystem that shoots down <b>incoming missiles</b> — nothing else. Its <b>capacity</b> is how many warheads it can engage each turn (the <b>N/M</b> on the enemy box: effective / max). Each engaged warhead is then a coin-flip to actually down it.</p>
+        <p>So there are <b>two ways through</b>:
+        <br>• <b>Cripple it</b> — target PD (ion is ideal) to knock its capacity down. At <b>0</b> capacity every missile lands unopposed.
+        <br>• <b>Saturate it</b> — fire more warheads in one turn than its capacity; the overflow gets through even at full health.</p>
+        <p>Each missile line shows a rough <b>intercept risk</b> for that salvo, and the log always says <i>why</i> a warhead got through — shot down, beat PD, PD down, or overwhelmed.</p>
         <button class="primary" data-act="modal-close">Got it</button>
       </div>`;
   }
@@ -639,7 +651,7 @@ export class App {
         // informed (a precise % is sensor-tier, M3).
         const pdNote =
           def.type === 'missile'
-            ? ` <span class="dim">· intercept risk ${pdBand(c.enemy.pdChance)}</span>`
+            ? ` <span class="dim">· intercept risk ${missileInterceptRead(c.enemy, def)}</span>`
             : '';
         const rowCls = st === 'underpowered' ? 'warn' : selectable ? '' : 'off';
         const btns = TARGET_CHOICES.map(
@@ -734,9 +746,16 @@ export class App {
       .join(' ');
     // Threat band (§7.4): a readable difficulty tag; sensor upgrades sharpen it later.
     const band = threat ? `<span class="threat t-${threat.toLowerCase()}">${threat}</span>` : '';
-    // Enemy point-defense strength (rough): tells the player how likely their
-    // missiles are to be shot down before they choose to fire one (§7.1).
-    const pd = mine ? '' : ` · point defense ${pdBand(ship.pdChance)}`;
+    // Enemy point-defense as a live subsystem read (§7.1): capacity/level so the
+    // player can see it undamaged (2/2), damaged (1/2), or disabled (0/2) and plan
+    // the missile counter-strategy. Ships with no PD say so plainly.
+    const pdLvl = ship.subsystems.pointDefense.level;
+    const pdEff = effLevel(ship.subsystems.pointDefense);
+    const pd = mine
+      ? ''
+      : pdLvl === 0
+        ? ' · no point defense'
+        : ` · point defense ${pdEff}/${pdLvl}${pdEff === 0 ? ' (disabled)' : ''}`;
     return `
       <div class="shipstat ${mine ? 'mine' : 'foe'}">
         <div class="sname">${label} ${band}</div>
