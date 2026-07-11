@@ -104,8 +104,11 @@ export interface CombatState {
   player: CombatShip;
   enemy: CombatShip;
   enemyArchetypeId: string;
-  /** Readable threat band shown in combat (§7.4). */
+  /** TRUE threat band (§7.4). Logic uses this; the UI shows a sensor-scaled READ. */
   enemyThreat: ThreatBand;
+  /** Stable seed for sensor reads of this encounter, so the fuzzed read is
+   * deterministic across re-renders and save/resume (§7.4 sensor accuracy). */
+  readSeed: string;
   doctrine: EnemyDoctrine;
   turn: number;
   log: string[];

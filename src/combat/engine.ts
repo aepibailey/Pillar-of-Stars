@@ -198,6 +198,7 @@ export function startCombat(args: StartCombatArgs): CombatState {
     enemy,
     enemyArchetypeId: archetype.id,
     enemyThreat: archetype.threat,
+    readSeed: `${args.seed}:threat:${args.encounterId}`,
     doctrine: archetype.doctrine,
     turn: 1,
     log: [`A ${args.enemyNameOverride ?? archetype.name} closes to knife-fight range.`],

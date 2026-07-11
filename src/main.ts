@@ -42,6 +42,14 @@ const initial =
     ? saved
     : createRun(freshSeed(), config, buildPlayerShip(playerDef, weapons));
 
+// Dev/testing affordance: ?sensors=N (0..5) sets the ship's current sensor level
+// so the §7.4 sensor-accuracy tiers can be exercised before the M5 upgrade shop
+// exists. Never fires in normal play (no query param = untouched).
+const sensorsOverride = query.get('sensors');
+if (sensorsOverride !== null) {
+  initial.ship.subsystems.sensors.level = Math.max(0, Math.min(5, Number(sensorsOverride) || 0));
+}
+
 const store = new Store(initial, deps);
 const app = new App(store, introFrames, tutorialCombat, () => {
   store.dispatch({ type: 'NEW_RUN', seed: freshSeed() });

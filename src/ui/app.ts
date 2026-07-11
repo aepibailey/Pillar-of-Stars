@@ -8,7 +8,6 @@
 import { clampPower, effLevel, pdCapacity, planVolley, reactorOutput } from '../combat/engine';
 import type {
   CombatShip,
-  CombatState,
   FireStatus,
   PowerAllocation,
   SubsystemId,
@@ -27,6 +26,13 @@ import type { Store } from '../engine/store';
 import type { RunState, WakeApproach } from '../engine/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
+import {
+  readThreat,
+  sensorTier,
+  THREAT_ORDER,
+  type KnownBand,
+  type ThreatRead,
+} from '../threat/sensor';
 import { isConsumed, jumpsBehind } from '../threat/wake';
 
 interface CombatDraft {
@@ -667,10 +673,20 @@ export class App {
       .join('');
 
     const canBribe = c.acceptsBribe && state.scrap >= c.bribeCost;
+    // §7.4: the enemy's TRUE band is read through the player's sensors — a fuzzy
+    // read at low sensor level (UNKNOWN if they're down), sharpening to an exact
+    // band + crew manifest at level 5. Crew count is a placeholder derived from
+    // the band until real crew generation lands with the boarding slice.
+    const enemyRead = readThreat(
+      c.enemyThreat as KnownBand,
+      sensorTier(effLevel(c.player.subsystems.sensors)),
+      c.readSeed,
+      { count: 2 + THREAT_ORDER.indexOf(c.enemyThreat as KnownBand) },
+    );
     overlay.innerHTML = `
       <div class="sheet combat">
         <div class="chead"><h1>Knife Fight — turn ${c.turn}</h1><button class="explain" data-act="explain">? Explain</button></div>
-        ${this.shipStatus(c.enemy, c.enemy.name, false, c.enemyThreat)}
+        ${this.shipStatus(c.enemy, c.enemy.name, false, enemyRead)}
         <div class="clog">${c.log.map((l) => `<div>${l}</div>`).join('')}</div>
         ${this.shipStatus(c.player, 'Your ship', true)}
         <div class="power">
@@ -730,12 +746,7 @@ export class App {
     });
   }
 
-  private shipStatus(
-    ship: CombatShip,
-    label: string,
-    mine: boolean,
-    threat?: CombatState['enemyThreat'],
-  ): string {
+  private shipStatus(ship: CombatShip, label: string, mine: boolean, read?: ThreatRead): string {
     const pct = Math.max(0, Math.round((ship.hull / ship.hullMax) * 100));
     const shields =
       '●'.repeat(ship.shieldLayers) +
@@ -744,8 +755,17 @@ export class App {
       .filter((id) => ship.subsystems[id].damage > 0)
       .map((id) => id.toUpperCase())
       .join(' ');
-    // Threat band (§7.4): a readable difficulty tag; sensor upgrades sharpen it later.
-    const band = threat ? `<span class="threat t-${threat.toLowerCase()}">${threat}</span>` : '';
+    // Threat band (§7.4) as a SENSOR READ: an exact band at high sensor level,
+    // a hedged one (trailing "?") at low level, UNKNOWN when sensors are down.
+    const band = read
+      ? `<span class="threat t-${read.band.toLowerCase()}">${read.band}${read.confidence === 'vague' || read.confidence === 'rough' ? ' ?' : ''}</span>`
+      : '';
+    // A second dim line surfaces the read's confidence + any manifest detail so
+    // the player can judge how much to trust the band before committing (§7.4).
+    const readLine =
+      read && !mine
+        ? `<div class="dim">sensors: ${read.band === 'UNKNOWN' ? 'no read — gambling blind' : `${read.confidence} read${read.detail ? ` · ${read.detail}` : ''}`}</div>`
+        : '';
     // Enemy point-defense as a live subsystem read (§7.1): capacity/level so the
     // player can see it undamaged (2/2), damaged (1/2), or disabled (0/2) and plan
     // the missile counter-strategy. Ships with no PD say so plainly.
@@ -761,6 +781,7 @@ export class App {
         <div class="sname">${label} ${band}</div>
         <div class="hbar"><div class="hfill" style="width:${pct}%"></div><span>HULL ${ship.hull}/${ship.hullMax}</span></div>
         <div class="dim">shields ${shields || '—'}${disabled ? ` · offline: ${disabled}` : ''}${pd}</div>
+        ${readLine}
       </div>`;
   }
 
