@@ -172,3 +172,45 @@ M1 ("Skeleton — prove the loop", §14) is signed off by the designer. What shi
 - `hull` does not yet exist in `RunState`; M2 introduces it as the run's health bar (§5).
 
 **Standing design question still open from M1**: the gate-locked-until-ruin rule (each sector's jump gate stays locked until the signal ruin is found). Left as-is pending a play verdict.
+
+---
+
+## Session 6 — 2026-07-11 · Milestone 2: The Knife Fight (§5, §7.1)
+
+Ship combat is in. Built in three commits: the deterministic core, run integration, then the UI.
+
+### The ship model (§5)
+
+- The run's `ship` is now the full 8-subsystem model (reactor/engines/weapons/shields/sensors/life-support/medbay/comms), each with a level and accumulated damage (effective level = level − damage). Hull is the run health bar; hull 0 = death (`destroyed`). The old `{sensors}` stub is gone.
+- The persistent ship IS a `CombatShip` — combat clones it, resets transient fields (power/shields/flee), and writes hull, subsystem damage, and spent ammo back when the fight ends. One shape, no translation layer.
+- **In M2 only reactor/engines/weapons/shields/sensors do work.** Life-support/medbay/comms exist in the model (the deck plan is whole) but draw no consequences until crew/diplomacy land (M3–M4). Flagged, not faked.
+
+### Combat (§7.1)
+
+- New `phase: 'combat'` + `CombatState` on RunState, driven by a pure state machine in `src/combat/` with its **own RNG cursor inside the state** — one seed reproduces a whole fight and save/resume mid-turn is exact. Turn = one decision (power + per-weapon targets + action) → player volley → enemy volley (doctrine) → upkeep.
+- **Power management (§5):** a reactor pool split across weapons/shields/engines; demand exceeds supply, so routing is the core choice. Reactor damage browns out the pool. `clampPower` enforces caps and sheds overflow (shields → engines → weapons last).
+- **Weapons (data-driven, `data/weapons.json`):** kinetic (ammo, absorbed by shield layers), laser (power-hungry, strips shield layers and burns through when it clears them), missile (bypasses shields, ammo, but point-defense can intercept), ion (disables a subsystem, no hull damage, absorbed by shields). Targeting a subsystem trades raw hull damage for a disable (`subsystemHullFactor` spill).
+- **Defenses:** layered shields (regen while powered), evasion from engine power (the "+ pilot" half waits for M4 crew), point-defense vs missiles.
+- **Non-combat outs:** flee (engine-charge timer; enemy keeps firing), surrender (faction-gated; pays scrap), bribe (faction-gated; pays scrap). Faction _parley_ is M4 — absent here, not stubbed as always-fail.
+
+### The 3 archetypes (`data/enemies.json`)
+
+Gunship (evasion + targeting), Missile Boat (forces point-defense), Shield Fortress (forces lasers + power routing). Each teaches a different defensive mechanic. Real Wake ships are the elite benchmark of M6; these stand in for now.
+
+### Integration & designer rulings
+
+- **Wake-space contact now launches a real fight** at the seam M1 marked; the `wake-fight`/`wake-fight-fast` placeholder events are retired. The fast approach's promised easier escape became a **flee-charge head start**. (Ruling 1: the **stranded robbery stays a placeholder** — a fuel-dead ship can't ship-fight; that's a boarding scenario for M3.)
+- **Hostile-ship node encounter** (ruling 5): a data-driven event (`config.hostileEncounterChance`, default 0.16) whose "engage" outcome launches combat via a new `launchCombat` event effect. `?hostile=1` forces it for on-demand playtesting (a dev affordance alongside `?seed=`).
+- **Repair (ruling 3):** `REPAIR` spends scrap to mend hull/subsystems on the map; rates in `config.repair`.
+- **Starting loadout (ruling 4):** the ship carries all four weapon types from the first fight, for testing.
+- **Save schema v4** (ship model + combat state); pre-M2 saves reset.
+
+### Verification
+
+**137 unit tests** (24 combat-core + 8 integration new): weapon-vs-defense mechanics, power/evasion math, ammo/cooldowns, every outcome, determinism + mid-fight save round-trip, launch/resolve/salvage/death, repair, and the wake-space→combat wiring. Build + lint clean. A Playwright combat smoke test (`scripts/smoke-combat.mjs`, `?hostile=1`) drives a full fight at 390×844 — engage → power/target/fire loop → enemy destroyed → salvage → back to map, zero console errors.
+
+### Open / next
+
+- **M1–M3 is the fun test.** M2 combat wants a playtest: are the three fights readable and distinct? Is the power split a real decision at reactor 4? Tuning knobs (weapon damage, hull totals, evasion, salvage) are all in `/data`.
+- Combat balance numbers are first-pass guesses — expect a tuning patch.
+- Next milestone is **M3 (Boots and Blasters):** personal combat + boarding (disable weapons+engines → neutralize/subdue/ally) + threat bands with sensor-based intel — at which point the stranded robbery becomes a real boarding fight and the enemy-read layer (§7.4) arrives.

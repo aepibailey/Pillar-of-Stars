@@ -13,10 +13,11 @@ export default tseslint.config(
     },
   },
   {
-    // Node-side tooling scripts (not shipped in the app bundle)
+    // Node-side tooling scripts (not shipped in the app bundle). These drive a
+    // headless browser, so they touch both Node and DOM globals.
     files: ['scripts/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly' },
+      globals: { process: 'readonly', console: 'readonly', localStorage: 'readonly' },
     },
   },
 );

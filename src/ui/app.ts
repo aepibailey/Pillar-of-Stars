@@ -5,6 +5,14 @@
  * is canvas.
  */
 
+import { clampPower, effLevel, reactorOutput } from '../combat/engine';
+import type {
+  CombatShip,
+  PowerAllocation,
+  SubsystemId,
+  TargetId,
+  WeaponDef,
+} from '../combat/types';
 import { getEvent } from '../events/engine';
 import {
   currentSector,
@@ -18,6 +26,19 @@ import type { RunState, WakeApproach } from '../engine/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
 import { isConsumed, jumpsBehind } from '../threat/wake';
+
+interface CombatDraft {
+  power: PowerAllocation;
+  targets: (TargetId | null)[];
+  turn: number;
+}
+
+const TARGET_CHOICES: { id: TargetId; short: string }[] = [
+  { id: 'hull', short: 'Hull' },
+  { id: 'weapons', short: 'Wpn' },
+  { id: 'engines', short: 'Eng' },
+  { id: 'shields', short: 'Shd' },
+];
 
 export interface IntroFrame {
   /** Path under /public, resolved against the deploy base (e.g. "intro/1-homeworld.svg"). */
@@ -38,6 +59,7 @@ export class App {
   private selectedId: string | null = null;
   private introIndex = 0;
   private geometry: MapGeometry | null = null;
+  private combatDraft: CombatDraft | null = null;
 
   constructor(
     private store: Store,
@@ -233,9 +255,18 @@ export class App {
     } else {
       html += '<p class="hint">Tap a highlighted system on the map to select a jump.</p>';
     }
+    html += this.repairSection(state);
     panel.innerHTML = html;
     panel.querySelector('[data-act="wait"]')?.addEventListener('click', () => {
       this.store.dispatch({ type: 'WAIT_DAY' });
+    });
+    panel.querySelectorAll<HTMLButtonElement>('[data-repair]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.store.dispatch({
+          type: 'REPAIR',
+          target: btn.dataset.repair as 'hull' | SubsystemId,
+        });
+      });
     });
 
     panel.querySelectorAll<HTMLButtonElement>('[data-node]').forEach((btn) => {
@@ -256,6 +287,9 @@ export class App {
         return;
       case 'event':
         this.renderEvent(overlay, state);
+        return;
+      case 'combat':
+        this.renderCombat(overlay, state);
         return;
       case 'dead':
         this.renderEnd(overlay, state, false);
@@ -331,6 +365,182 @@ export class App {
         this.store.dispatch({ type: 'ACK_OUTCOME' });
       });
     }
+  }
+
+  private ensureDraft(state: RunState): CombatDraft {
+    const c = state.combat!;
+    if (!this.combatDraft || this.combatDraft.turn !== c.turn) {
+      this.combatDraft = {
+        power: { ...c.player.power },
+        targets: c.player.weapons.map(() => null),
+        turn: c.turn,
+      };
+    }
+    return this.combatDraft;
+  }
+
+  private renderCombat(overlay: HTMLElement, state: RunState): void {
+    const c = state.combat;
+    if (!c) return;
+    overlay.hidden = false;
+    const weapons = this.store.getDeps().weapons;
+
+    if (c.outcome !== 'ongoing') {
+      const verdict: Record<string, string> = {
+        won: 'ENEMY DESTROYED',
+        fled: 'YOU GOT AWAY',
+        surrendered: 'YOU SURRENDERED',
+        bribed: 'THEY TOOK THE SCRAP',
+        lost: 'HULL BREACH',
+      };
+      const salvage =
+        c.outcome === 'won'
+          ? `<p class="dim">Salvage: +${c.salvageScrap} scrap · +${c.salvageFuel} fuel</p>`
+          : '';
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>${verdict[c.outcome] ?? 'FIGHT OVER'}</h1>
+          <p>${c.log[c.log.length - 1] ?? ''}</p>
+          ${salvage}
+          <button class="primary" data-act="combat-ack">Continue</button>
+        </div>`;
+      overlay.querySelector('[data-act="combat-ack"]')?.addEventListener('click', () => {
+        this.store.dispatch({ type: 'COMBAT_ACK' });
+      });
+      return;
+    }
+
+    const draft = this.ensureDraft(state);
+    const pool = reactorOutput(c.player);
+    const used = draft.power.engines + draft.power.weapons + draft.power.shields;
+
+    const powerRow = (chan: 'engines' | 'weapons' | 'shields', label: string) => `
+      <div class="prow">
+        <span>${label}</span>
+        <button data-pw="${chan}" data-d="-1">−</button>
+        <b>${draft.power[chan]}</b>
+        <button data-pw="${chan}" data-d="1">+</button>
+      </div>`;
+
+    const weaponRows = c.player.weapons
+      .map((slot, i) => {
+        const def = weapons.find((w) => w.id === slot.defId) as WeaponDef;
+        const ready =
+          slot.cooldownLeft === 0 && slot.ammo !== 0 && effLevel(c.player.subsystems.weapons) > 0;
+        const ammo = slot.ammo < 0 ? '∞' : String(slot.ammo);
+        const cd = slot.cooldownLeft > 0 ? ` · charging` : '';
+        const btns = TARGET_CHOICES.map(
+          (t) =>
+            `<button class="tgt ${draft.targets[i] === t.id ? 'on' : ''}" data-wt="${i}" data-tid="${t.id}" ${ready ? '' : 'disabled'}>${t.short}</button>`,
+        ).join('');
+        return `
+          <div class="wrow ${ready ? '' : 'off'}">
+            <div class="wname">${def.name} <span class="dim">${def.type} · ${def.powerCost}⚡ · ${ammo}${cd}</span></div>
+            <div class="tgts">${btns}</div>
+          </div>`;
+      })
+      .join('');
+
+    const canBribe = c.acceptsBribe && state.scrap >= c.bribeCost;
+    overlay.innerHTML = `
+      <div class="sheet combat">
+        <h1>Knife Fight — turn ${c.turn}</h1>
+        ${this.shipStatus(c.enemy, c.enemy.name, false)}
+        <div class="clog">${c.log.map((l) => `<div>${l}</div>`).join('')}</div>
+        ${this.shipStatus(c.player, 'Your ship', true)}
+        <div class="power">
+          <div class="ptitle">POWER <span class="${used > pool ? 'warn' : 'dim'}">${used}/${pool}</span></div>
+          ${powerRow('weapons', 'Weapons')}
+          ${powerRow('shields', 'Shields')}
+          ${powerRow('engines', 'Engines')}
+        </div>
+        <div class="weapons">${weaponRows}</div>
+        <div class="cacts">
+          <button class="primary" data-act="fire">Fire</button>
+          <button data-act="flee">Flee (${c.player.fleeCharge}/${c.fleeThreshold})</button>
+          ${c.acceptsSurrender ? '<button data-act="surrender">Surrender</button>' : ''}
+          ${c.acceptsBribe ? `<button data-act="bribe" ${canBribe ? '' : 'disabled'}>Bribe (${c.bribeCost} scrap)</button>` : ''}
+        </div>
+      </div>`;
+
+    overlay.querySelectorAll<HTMLButtonElement>('[data-pw]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const chan = btn.dataset.pw as 'engines' | 'weapons' | 'shields';
+        const delta = Number(btn.dataset.d);
+        const trial = { ...draft.power, [chan]: draft.power[chan] + delta };
+        draft.power = clampPower(c.player, trial);
+        this.render();
+      });
+    });
+    overlay.querySelectorAll<HTMLButtonElement>('[data-wt]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.wt);
+        const tid = btn.dataset.tid as TargetId;
+        draft.targets[i] = draft.targets[i] === tid ? null : tid;
+        this.render();
+      });
+    });
+    overlay.querySelector('[data-act="fire"]')?.addEventListener('click', () => {
+      this.store.dispatch({
+        type: 'COMBAT_ACTION',
+        combatAction: { type: 'FIRE', power: draft.power, targets: draft.targets },
+      });
+    });
+    overlay.querySelector('[data-act="flee"]')?.addEventListener('click', () => {
+      this.store.dispatch({
+        type: 'COMBAT_ACTION',
+        combatAction: { type: 'FLEE', power: draft.power },
+      });
+    });
+    overlay.querySelector('[data-act="surrender"]')?.addEventListener('click', () => {
+      this.store.dispatch({ type: 'COMBAT_ACTION', combatAction: { type: 'SURRENDER' } });
+    });
+    overlay.querySelector('[data-act="bribe"]')?.addEventListener('click', () => {
+      this.store.dispatch({ type: 'COMBAT_ACTION', combatAction: { type: 'BRIBE' } });
+    });
+  }
+
+  private shipStatus(ship: CombatShip, label: string, mine: boolean): string {
+    const pct = Math.max(0, Math.round((ship.hull / ship.hullMax) * 100));
+    const shields =
+      '●'.repeat(ship.shieldLayers) +
+      '○'.repeat(Math.max(0, effLevel(ship.subsystems.shields) - ship.shieldLayers));
+    const disabled = (['weapons', 'engines', 'shields', 'reactor'] as const)
+      .filter((id) => ship.subsystems[id].damage > 0)
+      .map((id) => id.toUpperCase())
+      .join(' ');
+    return `
+      <div class="shipstat ${mine ? 'mine' : 'foe'}">
+        <div class="sname">${label}</div>
+        <div class="hbar"><div class="hfill" style="width:${pct}%"></div><span>HULL ${ship.hull}/${ship.hullMax}</span></div>
+        <div class="dim">shields ${shields || '—'}${disabled ? ` · offline: ${disabled}` : ''}</div>
+      </div>`;
+  }
+
+  /** Ship line on the map panel: hull + repair buttons for combat damage (§5). */
+  private repairSection(state: RunState): string {
+    const ship = state.ship;
+    const damaged = (['reactor', 'engines', 'weapons', 'shields', 'sensors'] as const).filter(
+      (id) => ship.subsystems[id].damage > 0,
+    );
+    const hurt = ship.hull < ship.hullMax || damaged.length > 0;
+    let html = `<div class="shipline">SHIP · HULL ${ship.hull}/${ship.hullMax}${
+      damaged.length
+        ? ` · <span class="warn">${damaged.map((d) => d.toUpperCase()).join(' ')}</span>`
+        : ''
+    }</div>`;
+    if (!hurt) return html;
+    if (state.scrap <= 0) {
+      html += '<p class="hint">Repairs need scrap. You have none.</p>';
+      return html;
+    }
+    if (ship.hull < ship.hullMax) {
+      html += `<button data-repair="hull">Patch hull<span class="sub">1 scrap → +${this.store.getDeps().config.repair.hullPerScrap} hull</span></button>`;
+    }
+    for (const id of damaged) {
+      html += `<button data-repair="${id}">Repair ${id}<span class="sub">1 scrap → −${this.store.getDeps().config.repair.subsystemDamagePerScrap} damage</span></button>`;
+    }
+    return html;
   }
 
   private renderEnd(overlay: HTMLElement, state: RunState, won: boolean): void {

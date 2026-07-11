@@ -12,7 +12,12 @@ import type { GameConfig } from './engine/types';
 import type { EventDef } from './events/types';
 import { App, type IntroFrame } from './ui/app';
 
-const config = configJson as GameConfig;
+const query = new URLSearchParams(location.search);
+const baseConfig = configJson as GameConfig;
+// Dev/testing affordance (alongside ?seed=): ?hostile=1 makes every survey a
+// ship fight, for exercising combat on demand. Never affects normal play.
+const config: GameConfig =
+  query.get('hostile') === '1' ? { ...baseConfig, hostileEncounterChance: 1 } : baseConfig;
 const events = eventsJson as unknown as EventDef[];
 const weapons = weaponsJson as WeaponDef[];
 const enemies = enemiesJson as unknown as EnemyArchetype[];
