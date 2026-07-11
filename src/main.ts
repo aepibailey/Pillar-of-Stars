@@ -6,6 +6,7 @@ import introJson from '../data/intro.json';
 import namesWakeJson from '../data/names-wake.json';
 import shipPlayerJson from '../data/ship-player.json';
 import tutorialCombatJson from '../data/tutorial-combat.json';
+import tutorialGroundJson from '../data/tutorial-ground.json';
 import weaponsJson from '../data/weapons.json';
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from './combat/types';
 import type { GroundConfig } from './ground/types';
@@ -35,6 +36,7 @@ const ground = (groundJson as { config: GroundConfig }).config;
 const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground };
 const introFrames = (introJson as { frames: IntroFrame[] }).frames;
 const tutorialCombat = (tutorialCombatJson as { steps: TutorialStep[] }).steps;
+const tutorialGround = (tutorialGroundJson as { steps: TutorialStep[] }).steps;
 
 function freshSeed(): string {
   // Seed selection is the ONE place non-determinism is allowed. ?seed=X pins it.
@@ -58,7 +60,7 @@ if (sensorsOverride !== null) {
 }
 
 const store = new Store(initial, deps);
-const app = new App(store, introFrames, tutorialCombat, () => {
+const app = new App(store, introFrames, tutorialCombat, tutorialGround, () => {
   store.dispatch({ type: 'NEW_RUN', seed: freshSeed() });
 });
 app.start();

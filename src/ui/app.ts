@@ -93,10 +93,23 @@ export interface IntroFrame {
 export interface TutorialStep {
   title: string;
   text: string;
+  /** Optional gate — drop this step if the player lacks that action/tool this fight. */
+  requires?: 'item';
 }
 
-/** Persistent "seen the combat tutorial" marker — once ever, across runs. */
+/** A once-ever coach-card walkthrough tied to a specific kind of encounter. */
+interface Coach {
+  /** localStorage marker — shown once, across runs. */
+  key: string;
+  steps: TutorialStep[];
+  /** True while the encounter this coach explains is live on screen. */
+  isLive: (state: RunState) => boolean;
+  /** Label on the final card's button. */
+  lastLabel: string;
+}
+
 const COMBAT_TUTORIAL_KEY = 'pillar-of-stars.tutorial.combat';
+const GROUND_TUTORIAL_KEY = 'pillar-of-stars.tutorial.ground';
 
 interface UiRefs {
   hud: HTMLElement;
@@ -114,8 +127,9 @@ export class App {
   /** A transient modal layered over the current screen: ship stats or combat help. */
   private modal: 'ship' | 'combat-help' | null = null;
   private shipBtn!: HTMLButtonElement;
-  /** Current step of the first-combat tutorial, or null when inactive/done. */
-  private tutorialStep: number | null = null;
+  /** The first-encounter coach cards (combat + ground), and the active walk. */
+  private coaches: Coach[] = [];
+  private activeCoach: { coach: Coach; steps: TutorialStep[]; step: number } | null = null;
   /** Personal-combat targeting draft (selected foe + lethal/stun setting). */
   private groundTarget: string | null = null;
   private groundMode: FireMode = 'lethal';
@@ -123,9 +137,24 @@ export class App {
   constructor(
     private store: Store,
     private introFrames: IntroFrame[],
-    private tutorialSteps: TutorialStep[],
+    combatTutorial: TutorialStep[],
+    groundTutorial: TutorialStep[],
     private newRun: () => void,
   ) {
+    this.coaches = [
+      {
+        key: COMBAT_TUTORIAL_KEY,
+        steps: combatTutorial,
+        lastLabel: 'Start fighting',
+        isLive: (s) => s.phase === 'combat' && s.combat?.outcome === 'ongoing',
+      },
+      {
+        key: GROUND_TUTORIAL_KEY,
+        steps: groundTutorial,
+        lastLabel: 'Start fighting',
+        isLive: (s) => s.phase === 'ground' && s.ground?.outcome === 'ongoing',
+      },
+    ];
     this.refs = {
       hud: must('hud'),
       panel: must('panel'),
@@ -158,32 +187,42 @@ export class App {
 
   private tutorialEl!: HTMLDivElement;
 
-  private tutorialDone(): boolean {
+  private isDone(key: string): boolean {
     try {
-      return localStorage.getItem(COMBAT_TUTORIAL_KEY) === 'done';
+      return localStorage.getItem(key) === 'done';
     } catch {
       return false;
     }
   }
 
-  private markTutorialDone(): void {
+  private markDone(key: string): void {
     try {
-      localStorage.setItem(COMBAT_TUTORIAL_KEY, 'done');
+      localStorage.setItem(key, 'done');
     } catch {
       /* private mode / no storage — just don't show it again this session */
     }
-    this.tutorialStep = null;
   }
 
-  /** Arm the tutorial on the first live fight; clear it once combat is over. */
+  /** Whether a step's gated action/tool is actually present this encounter. */
+  private stepApplies(step: TutorialStep, state: RunState): boolean {
+    if (step.requires === 'item') return !!state.ground?.items.some((i) => i.count > 0);
+    return true;
+  }
+
+  /** Arm the matching coach on the first live encounter; clear it once it ends. */
   private maybeActivateTutorial(state: RunState): void {
-    const inFight = state.phase === 'combat' && state.combat?.outcome === 'ongoing';
-    if (inFight) {
-      if (this.tutorialStep === null && !this.tutorialDone() && this.tutorialSteps.length > 0) {
-        this.tutorialStep = 0;
+    if (this.activeCoach && !this.activeCoach.coach.isLive(state)) {
+      this.activeCoach = null;
+    }
+    if (this.activeCoach) return;
+    for (const coach of this.coaches) {
+      if (!coach.isLive(state)) continue;
+      // The live coach for this phase — activate it unless already seen/empty.
+      if (!this.isDone(coach.key)) {
+        const steps = coach.steps.filter((s) => this.stepApplies(s, state));
+        if (steps.length > 0) this.activeCoach = { coach, steps, step: 0 };
       }
-    } else {
-      this.tutorialStep = null;
+      break;
     }
   }
 
@@ -238,37 +277,41 @@ export class App {
     this.shipBtn.style.display = state.phase === 'map' && !this.modal ? 'block' : 'none';
   }
 
-  /** The first-combat coach card, layered over the combat screen (data-driven). */
+  /** The active first-encounter coach card, layered over combat/ground (data-driven). */
   private renderTutorial(state: RunState): void {
-    const active =
-      this.tutorialStep !== null &&
-      !this.modal &&
-      state.phase === 'combat' &&
-      state.combat?.outcome === 'ongoing';
+    const ac = this.activeCoach;
+    const active = ac !== null && !this.modal && ac.coach.isLive(state);
     this.tutorialEl.style.display = active ? 'block' : 'none';
-    if (!active || this.tutorialStep === null) {
+    if (!active || !ac) {
       this.tutorialEl.innerHTML = ''; // clear stale card so it's fully gone
       return;
     }
 
-    const step = this.tutorialSteps[this.tutorialStep];
-    const n = this.tutorialSteps.length;
-    const last = this.tutorialStep >= n - 1;
+    const step = ac.steps[ac.step];
+    const n = ac.steps.length;
+    const last = ac.step >= n - 1;
     this.tutorialEl.innerHTML = `
       <div class="tutcard">
-        <div class="tuthead">TUTORIAL · ${this.tutorialStep + 1}/${n}<button class="tutskip" data-act="tut-skip">Skip ▸</button></div>
+        <div class="tuthead">TUTORIAL · ${ac.step + 1}/${n}<button class="tutskip" data-act="tut-skip">Skip ▸</button></div>
         <h3>${step.title}</h3>
         <p>${step.text}</p>
-        <button class="primary" data-act="tut-next">${last ? 'Start fighting' : 'Next'}</button>
+        <button class="primary" data-act="tut-next">${last ? ac.coach.lastLabel : 'Next'}</button>
       </div>`;
     this.tutorialEl.querySelector('[data-act="tut-next"]')?.addEventListener('click', () => {
-      if (this.tutorialStep === null) return;
-      if (this.tutorialStep >= n - 1) this.markTutorialDone();
-      else this.tutorialStep += 1;
+      if (!this.activeCoach) return;
+      if (this.activeCoach.step >= this.activeCoach.steps.length - 1) {
+        this.markDone(this.activeCoach.coach.key);
+        this.activeCoach = null;
+      } else {
+        this.activeCoach.step += 1;
+      }
       this.render();
     });
     this.tutorialEl.querySelector('[data-act="tut-skip"]')?.addEventListener('click', () => {
-      this.markTutorialDone();
+      if (this.activeCoach) {
+        this.markDone(this.activeCoach.coach.key);
+        this.activeCoach = null;
+      }
       this.render();
     });
   }

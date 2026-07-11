@@ -17,6 +17,7 @@ await page.goto(`${BASE}/?seed=BOARD&board=1`);
 await page.evaluate(() => {
   localStorage.clear();
   localStorage.setItem('pillar-of-stars.tutorial.combat', 'done');
+  localStorage.setItem('pillar-of-stars.tutorial.ground', 'done'); // test mechanics, not the coach
 });
 await page.goto(`${BASE}/?seed=BOARD&board=1`);
 await page.waitForTimeout(400);

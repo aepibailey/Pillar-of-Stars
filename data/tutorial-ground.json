@@ -1,0 +1,42 @@
+{
+  "_note": "Scripted first-personal-combat tutorial (§7.2). Same coach-card system as tutorial-combat.json — UI-only, shown once ever, over the first ground/boarding fight. A step with `requires` is dropped when the player doesn't have that action/tool this fight (don't teach what isn't there).",
+  "steps": [
+    {
+      "title": "Boots on the deck",
+      "text": "Now it's personal — a blaster fight in close quarters. Like the ship duel, it's turn-based and SIMULTANEOUS: you line up one action, then everyone acts at once. Let's walk the room."
+    },
+    {
+      "title": "The ones trying to kill you",
+      "text": "Up top are the hostiles — each with a health bar and a stun meter. Tap one to make it your target. Drop its health to zero to kill it, or fill its stun bar to knock it out cold (that matters — see the last card)."
+    },
+    {
+      "title": "Cover is a position",
+      "text": "The room is a few named spots — Airlock, Corridor, Bridge — each with a cover rating. Tap a spot under \"Move up to\" to reposition. Better cover means fewer hits land on you there."
+    },
+    {
+      "title": "Cover wears down",
+      "text": "Cover isn't free forever: every shot it soaks chips it (the x/x on each spot). Once it's shot away, that position stops protecting whoever's standing in it — yours or theirs. Flush them out of cover, or keep yours intact."
+    },
+    {
+      "title": "Aimed shot vs snap shot",
+      "text": "Two ways to fire. An AIMED shot hits harder to land but runs your blaster hot. A SNAP shot is less accurate but barely heats up. Pick your target, then the shot — it's a trade every turn."
+    },
+    {
+      "title": "Mind the heat",
+      "text": "Blasters don't run out of ammo, they overheat. Every shot adds heat; hit the ceiling and the blaster refuses to fire until you cool it. VENT clears it in one turn; TAKE COVER cools you while you sit tight. Rhythm, not reloading."
+    },
+    {
+      "title": "Pin them down",
+      "text": "SUPPRESS rakes a target's position instead of trying to kill it — they keep their head down, and their aim suffers next turn. Good for buying a move, or covering a push toward better cover."
+    },
+    {
+      "title": "Your kit",
+      "text": "You carry a few one-use items. A Stim patches you up; a Stun Grenade cracks off in your current position and dumps stun on everyone there — the fast way to set up a non-lethal takedown.",
+      "requires": "item"
+    },
+    {
+      "title": "How this ends",
+      "text": "Set your blaster to LETHAL to kill (Neutralize — full salvage) or STUN to knock them out (Subdue — prisoners and a fuller hold). If the odds favor it, PARLEY talks them down instead. And you can always WITHDRAW back to the ship. Good hunting."
+    }
+  ]
+}
