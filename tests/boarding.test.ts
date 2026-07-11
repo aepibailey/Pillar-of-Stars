@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { config, enemies, makeDeps } from './fixtures';
+import { config, enemies, makeDeps, threatRewards } from './fixtures';
 import { currentSector, reduce, type Deps } from '../src/engine/reducer';
 import { aliveFoes } from '../src/ground/engine';
 import type { RunState } from '../src/engine/types';
@@ -81,6 +81,44 @@ describe('boarding trigger (§7.3)', () => {
     expect(g.ground).toBeNull();
     expect(g.scrap).toBe(scrapBefore + reward + 2); // neutralize bonus
     expect(g.flags.boardedMassacre).toBe(true);
+  });
+
+  it('boarding loot scales by threat band — fuel + intel + matching-type ammo', () => {
+    // gunship = SEASONED, carries kinetic (slugthrower) → kinetic ammo top-up.
+    const { s, d } = toCombat('gunship');
+    disableEnemy(s);
+    // Spend some kinetic ammo first so a top-up is observable.
+    const kin = s.combat!.player.weapons.find((w) => w.defId === 'kinetic-autocannon')!;
+    kin.ammo = 1;
+    let g = reduce(s, { type: 'BOARD' }, d);
+    const band = g.ground!.threat;
+    const loot = threatRewards.rewardsByBand[band];
+    const fuelBefore = g.fuel;
+    const intelBefore = g.intel;
+    for (const f of g.ground!.fighters) if (f.side === 'foe') f.down = 'killed';
+    g.ground!.outcome = 'neutralized';
+    g = reduce(g, { type: 'GROUND_ACK' }, d);
+    expect(g.fuel).toBe(fuelBefore + loot.fuel);
+    expect(g.intel).toBe(intelBefore + loot.intel);
+    const kinAfter = g.ship.weapons.find((w) => w.defId === 'kinetic-autocannon')!;
+    expect(kinAfter.ammo).toBe(Math.min(8, 1 + loot.ammo)); // capped at magazine
+  });
+
+  it('ally boarding grants intel + a little scrap, but no fuel/ammo strip (§7.3)', () => {
+    const { s, d } = toCombat('gunship');
+    disableEnemy(s);
+    const kin = s.combat!.player.weapons.find((w) => w.defId === 'kinetic-autocannon')!;
+    kin.ammo = 1;
+    let g = reduce(s, { type: 'BOARD' }, d);
+    const loot = threatRewards.rewardsByBand[g.ground!.threat];
+    const fuelBefore = g.fuel;
+    for (const f of g.ground!.fighters) if (f.side === 'foe') f.down = 'yielded';
+    g.ground!.outcome = 'allied';
+    g = reduce(g, { type: 'GROUND_ACK' }, d);
+    expect(g.intel).toBe(loot.intel); // they share what they know
+    expect(g.fuel).toBe(fuelBefore); // no fuel — you didn't strip the ship
+    expect(g.ship.weapons.find((w) => w.defId === 'kinetic-autocannon')!.ammo).toBe(1); // no ammo
+    expect(g.flags.alliedBoarding).toBe(true);
   });
 
   it('a GROUND_ACTION only lands while a boarding is ongoing', () => {

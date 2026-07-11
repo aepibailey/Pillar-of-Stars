@@ -397,10 +397,14 @@ export class App {
   private renderHud(state: RunState): void {
     const behind = jumpsBehind(state.wake, state.visitOrder, state.currentSystemId);
     const fuelWarn = state.fuel <= 3 ? ' warn' : '';
+    // INTEL only appears once earned (a boarding reward, §7.3) to keep the HUD
+    // uncluttered on the common path where it's still zero.
+    const intel = state.intel > 0 ? `<span class="stat">INTEL <b>${state.intel}</b></span>` : '';
     this.refs.hud.innerHTML = `
       <span class="stat">SECTOR <b>${state.sectorIndex + 1}</b></span>
       <span class="stat${fuelWarn}">FUEL <b>${fmt(state.fuel)}</b></span>
       <span class="stat">SCRAP <b>${state.scrap}</b></span>
+      ${intel}
       <span class="stat wake">WAKE <b>${fmt(behind)} back</b></span>
     `;
   }
@@ -852,10 +856,17 @@ export class App {
         'captain-down': 'THE CAPTAIN FALLS',
         withdrawn: 'YOU FALL BACK',
       };
+      // Band-scaled loot (§7.3/§7.4), mirroring applyGroundResult exactly.
+      const loot = this.store.getDeps().threatRewards.rewardsByBand[g.threat] ?? {
+        fuel: 0,
+        intel: 0,
+        ammo: 0,
+      };
+      const ammoLine = g.reward.ammoType ? ` · +${loot.ammo} ${g.reward.ammoType} ammo` : '';
       const paid: Record<string, string> = {
-        neutralized: `Salvage stripped: +${g.reward.scrap + 2} scrap · +${g.reward.fuel} fuel`,
-        subdued: `Hold + prisoners: +${g.reward.scrap + 4} scrap · +${g.reward.fuel} fuel`,
-        allied: `Goodwill and a little cargo: +${Math.floor(g.reward.scrap / 2)} scrap · +${g.reward.fuel + 1} fuel`,
+        neutralized: `Salvage stripped: +${g.reward.scrap + 2} scrap · +${loot.fuel} fuel · +${loot.intel} intel${ammoLine}`,
+        subdued: `Hold + prisoners: +${g.reward.scrap + 4} scrap · +${loot.fuel} fuel · +${loot.intel} intel${ammoLine}`,
+        allied: `They talk: +${Math.floor(g.reward.scrap / 2)} scrap · +${loot.intel} intel`,
         withdrawn: 'You left the hull adrift — nothing gained.',
         'captain-down': '',
       };

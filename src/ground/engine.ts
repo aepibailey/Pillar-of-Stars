@@ -51,8 +51,8 @@ export interface StartGroundArgs {
   seed: string;
   encounterId: string;
   config: GroundConfig;
-  /** Salvage carried from the disabled ship, paid out if the boarding succeeds. */
-  reward: { scrap: number; fuel: number };
+  /** Loot context carried from the disabled ship (scrap cargo + ammo type). */
+  reward: { scrap: number; ammoType: import('../combat/types').WeaponType | null };
 }
 
 export function startGround(args: StartGroundArgs): GroundState {

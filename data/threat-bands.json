@@ -1,0 +1,9 @@
+{
+  "_note": "Threat-band definitions (§7.4). For now: boarding loot scaled by band (§7.3). Starting numbers for playtest tuning, not final. `ammo` is a quantity of the boarded ship's ammo-consuming weapon type (kinetic/missile) — an M2/M3 stopgap for ammo attrition until the full economy in M5/§11.",
+  "rewardsByBand": {
+    "GREEN": { "fuel": 2, "intel": 1, "ammo": 4 },
+    "SEASONED": { "fuel": 4, "intel": 2, "ammo": 6 },
+    "VETERAN": { "fuel": 6, "intel": 3, "ammo": 8 },
+    "ELITE": { "fuel": 8, "intel": 5, "ammo": 10 }
+  }
+}

@@ -96,6 +96,8 @@ export interface RunState {
   // Run-scoped economy (never captain-scoped).
   fuel: number;
   scrap: number;
+  /** Intel currency (§7.3/§7.4) — earned from boardings/allies, spent later. */
+  intel: number;
 
   wake: WakeState;
   activeEvent: ActiveEvent | null;
@@ -166,6 +168,11 @@ export interface GameConfig {
   /** Dev/testing only (?board=1): start ship fights with the enemy's weapons +
    * engines already disabled, so the Board flow is reachable on turn 1. */
   debugBoardable?: boolean;
+}
+
+/** Per-threat-band boarding loot (§7.3/§7.4), data-driven for playtest tuning. */
+export interface ThreatRewards {
+  rewardsByBand: Record<string, { fuel: number; intel: number; ammo: number }>;
 }
 
 export type { SubsystemId };

@@ -15,6 +15,7 @@ import type {
   PlayerShipDef,
   SubsystemId,
   WeaponDef,
+  WeaponType,
 } from '../combat/types';
 import { findFixedEvent, getEvent, pickNodeEvent, pickOutcome } from '../events/engine';
 import type { EventDef, EventEffects } from '../events/types';
@@ -26,13 +27,21 @@ import type { GroundAction, GroundConfig } from '../ground/types';
 import { THREAT_ORDER } from '../threat/sensor';
 import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
-import type { Character, GameConfig, RunState, ShipState, WakeApproach } from './types';
+import type {
+  Character,
+  GameConfig,
+  RunState,
+  ShipState,
+  ThreatRewards,
+  WakeApproach,
+} from './types';
 
+// v8: intel currency + band-scaled boarding loot.
 // v7: boarding / personal combat (RunState.ground + 'ground' phase).
 // v6: sensor-scaled threat read (combat carries a per-encounter readSeed).
 // v5: point-defense subsystem (targetable PD + saturating salvos).
 // v4: ship subsystem model + combat (was v3: strandedDays / Wait-1-Day).
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -60,6 +69,8 @@ export interface Deps {
   wakeShipNames: readonly string[];
   /** Personal-combat tuning + boarding scenario data (§7.2). */
   ground: GroundConfig;
+  /** Threat-band boarding loot table (§7.3/§7.4). */
+  threatRewards: ThreatRewards;
 }
 
 /** Build a fresh player ship (§5) from the data-driven class definition. */
@@ -96,6 +107,7 @@ export function createRun(seed: string, config: GameConfig, ship: ShipState): Ru
     flags: {},
     fuel: config.startFuel,
     scrap: config.startScrap,
+    intel: 0,
     wake: createWakeState(config.wakeGraceJumps),
     activeEvent: null,
     combat: null,
@@ -306,6 +318,28 @@ export function canBoard(c: CombatState): boolean {
   );
 }
 
+/** The boarded ship's ammo-consuming weapon type (kinetic/missile), if any (§7.1). */
+function ammoWeaponType(ship: CombatState['enemy'], weapons: Deps['weapons']): 'kinetic' | 'missile' | null {
+  for (const slot of ship.weapons) {
+    const def = weapons.find((w) => w.id === slot.defId);
+    if (def && def.ammo !== undefined && (def.type === 'kinetic' || def.type === 'missile')) {
+      return def.type;
+    }
+  }
+  return null;
+}
+
+/** Top up the player's matching-type weapons with looted ammo (§7.3, capped at magazine). */
+function addAmmo(state: RunState, weapons: Deps['weapons'], type: WeaponType | null, qty: number): void {
+  if (!type || qty <= 0) return;
+  for (const slot of state.ship.weapons) {
+    const def = weapons.find((w) => w.id === slot.defId);
+    if (def && def.type === type && def.ammo !== undefined && slot.ammo >= 0) {
+      slot.ammo = Math.min(def.ammo, slot.ammo + qty);
+    }
+  }
+}
+
 /** Dock the disabled ship and launch personal combat in its corridors (§7.3). */
 function launchBoarding(state: RunState, deps: Deps): void {
   const c = state.combat as CombatState;
@@ -318,14 +352,14 @@ function launchBoarding(state: RunState, deps: Deps): void {
     seed: state.seed,
     encounterId: `${state.stats.combats}b`,
     config: deps.ground,
-    reward: { scrap: c.salvageScrap, fuel: c.salvageFuel },
+    reward: { scrap: c.salvageScrap, ammoType: ammoWeaponType(c.enemy, deps.weapons) },
   });
   state.combat = null;
   state.phase = 'ground';
 }
 
-/** Apply a resolved boarding back to the run (§7.3 paths). */
-function applyGroundResult(state: RunState, config: GameConfig): void {
+/** Apply a resolved boarding back to the run (§7.3 paths), loot scaled by band (§7.4). */
+function applyGroundResult(state: RunState, deps: Deps): void {
   const g = state.ground;
   if (!g || g.outcome === 'ongoing') return;
 
@@ -335,26 +369,33 @@ function applyGroundResult(state: RunState, config: GameConfig): void {
     state.deathCause = 'boarding';
     return;
   }
+
+  const loot = deps.threatRewards.rewardsByBand[g.threat] ?? { fuel: 0, intel: 0, ammo: 0 };
   if (g.outcome === 'neutralized') {
-    // Full salvage, but hardware got shot up and some factions remember massacres.
+    // Full strip: cargo scrap + band fuel/intel/ammo. Some factions remember massacres.
     state.scrap += g.reward.scrap + 2;
-    state.fuel += g.reward.fuel;
+    state.fuel += loot.fuel;
+    state.intel += loot.intel;
+    addAmmo(state, deps.weapons, g.reward.ammoType, loot.ammo);
     state.flags.boardedMassacre = true;
   } else if (g.outcome === 'subdued') {
-    // Harder to pull off, but prisoners + an intact hold pay better.
+    // Harder to pull off, but prisoners + an intact hold pay a scrap premium.
     state.scrap += g.reward.scrap + 4;
-    state.fuel += g.reward.fuel;
+    state.fuel += loot.fuel;
+    state.intel += loot.intel;
+    addAmmo(state, deps.weapons, g.reward.ammoType, loot.ammo);
     state.flags.tookPrisoners = true;
   } else if (g.outcome === 'allied') {
-    // They stand down: less loot, but goodwill/intel banked for later systems.
+    // You didn't strip the ship — no fuel/ammo. They talk, so you gain the intel
+    // and a little goodwill cargo (§7.3: "escorts, intel, or a Defector recruit").
     state.scrap += Math.floor(g.reward.scrap / 2);
-    state.fuel += g.reward.fuel + 1;
+    state.intel += loot.intel;
     state.flags.alliedBoarding = true;
   }
   // 'withdrawn' → left the hull adrift, no reward.
   state.ground = null;
   state.phase = 'map';
-  checkStranded(state, config);
+  checkStranded(state, deps.config);
 }
 
 /** Apply a resolved fight back to the run: writeback ship, salvage, or death. */
@@ -658,7 +699,7 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       if (next.phase !== 'ground' || !next.ground || next.ground.outcome === 'ongoing') {
         return state;
       }
-      applyGroundResult(next, config);
+      applyGroundResult(next, deps);
       return next;
     }
 

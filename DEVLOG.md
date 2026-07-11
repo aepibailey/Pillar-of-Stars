@@ -434,3 +434,24 @@ Foe strength by band, `captainHp 14`, heat 4 / cool 1 / aimed 3 / snap 1, cover 
 ### Flags for the designer
 - **Boarding balance is swingy.** A naive playthrough (aimed shots in the open, ignoring cover/parley/withdraw) can get the captain killed even on a GREEN crew — intended as a gamble, but the numbers are a first cut; all data-tunable. Worth a playtest pass.
 - **Deferred (flagged, not built):** the general **exploration preview** (next-system contents + loot-quality read) — it needs a contents/loot model that doesn't exist yet; the sensor engine already supports the read, only the data model is missing. Enemies-boarding-you (§7.3) also still deferred. Companion slot / crew traits / persistent injuries wait on the crew system (M4-ish).
+
+---
+
+## Session 14 — 2026-07-11 · M3 playtest additions — personal-combat tutorial + band-scaled boarding loot
+
+### Task 1 — first personal-combat tutorial (§7.2)
+Generalized the M2 ship-combat tutorial into a small multi-**coach** system (each coach = its own localStorage key + steps + `isLive` predicate; one shared bottom card renders the active one). The M2 combat tutorial is now just one coach (behavior unchanged); the ground tutorial is another, armed on the first live boarding. `data/tutorial-ground.json` — 9 data-driven steps (movement, cover + that it degrades, aimed vs snap, heat/vent, suppress, items, lethal/stun → Neutralize/Subdue/Parley). Steps carry an optional `requires` (e.g. `'item'`) so the walk never teaches an action the player lacks this fight. Same skippable-shown-once feel as M2. New `scripts/smoke-ground-tutorial.mjs` verifies show-once/walk/no-reappear; the M2 tutorial smoke still passes (refactor didn't change it).
+
+### Task 2 — boarding loot scaled by threat band (§7.3/§7.4)
+**Findings first:** ammo is *already* tracked per weapon slot (`WeaponSlot.ammo`), so no ammo-pool concept was needed — loot just tops up the player's matching-type weapon (small lift). There was **no intel resource**; added a minimal `intel` counter to `RunState` + HUD (shown only once > 0). **SCHEMA_VERSION 7 → 8.**
+
+New `data/threat-bands.json` `rewardsByBand` (tunable): FUEL 2/4/6/8, INTEL 1/2/3/5, AMMO 4/6/8/10 (GREEN→ELITE). On a successful boarding, `applyGroundResult` now pays scrap (cargo) **+ band fuel + band intel + band ammo** (ammo type = the boarded ship's ammo-consuming weapon, capped at the player's magazine). Verified on-screen: a GREEN scavenger boarding pays "+4 scrap · +2 fuel · +1 intel · +4 kinetic ammo", and the HUD shows INTEL.
+
+**Ally behavior (confirmed + decided):** an Ally resolution doesn't strip the ship, so it grants **intel only** (they share what they know — §7.3's "escorts, intel, or a Defector recruit") plus a little goodwill scrap — no fuel/ammo. Flagging this as my call; easy to change if you'd rather ally pay differently.
+
+### Verification
+**186 tests** (2 new boarding-loot tests: band fuel/intel/ammo top-up + magazine cap; ally = intel-only). Build/tsc/lint clean. Tutorial (combat + ground), combat, boarding, and main smokes all green; loot line + intel HUD confirmed on a real win. Dev overrides `?board=1` / `?sensors=N` unchanged.
+
+### Flags for the designer
+- All the loot numbers + the ally policy are data/one-liners — tune after playtest.
+- Boarding difficulty is still swingy (a naive fight can kill the captain even on GREEN) — unchanged from Session 13, still worth a balance pass.

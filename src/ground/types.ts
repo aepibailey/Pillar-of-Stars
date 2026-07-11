@@ -10,7 +10,7 @@
  * turn-start state, then everything resolves together.
  */
 
-import type { ThreatBand } from '../combat/types';
+import type { ThreatBand, WeaponType } from '../combat/types';
 
 /** Static zone definition from data (a cargo bay corner, a bulkhead, a console). */
 export interface ZoneDef {
@@ -81,8 +81,13 @@ export interface GroundState {
   origin: 'boarding';
   /** The captain's consumables for this scene (minimal M3 kit). */
   items: { id: string; count: number }[];
-  /** Salvage on the table if the boarding succeeds (carried from the ship fight). */
-  reward: { scrap: number; fuel: number };
+  /**
+   * Loot context carried from the disabled ship (§7.3). `scrap` is its cargo;
+   * `ammoType` is the boarded ship's ammo-consuming weapon type, so an ammo
+   * reward tops up the player's matching weapon. Fuel/intel/ammo QUANTITIES are
+   * band-scaled at payout time (see threat-bands.json).
+   */
+  reward: { scrap: number; ammoType: WeaponType | null };
 }
 
 /** A player decision for one personal-combat turn (one save point). */

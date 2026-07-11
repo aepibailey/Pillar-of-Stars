@@ -20,7 +20,7 @@ function scene(overrides: Partial<StartGroundArgs> = {}): GroundState {
     seed: 'ground-seed',
     encounterId: '0',
     config,
-    reward: { scrap: 5, fuel: 2 },
+    reward: { scrap: 5, ammoType: 'kinetic' },
     ...overrides,
   });
 }
@@ -59,7 +59,7 @@ function base(): StartGroundArgs {
     seed: 's',
     encounterId: '0',
     config,
-    reward: { scrap: 5, fuel: 2 },
+    reward: { scrap: 5, ammoType: 'kinetic' },
   };
 }
 
