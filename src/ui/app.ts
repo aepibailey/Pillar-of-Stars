@@ -5,9 +5,11 @@
  * is canvas.
  */
 
-import { clampPower, effLevel, reactorOutput } from '../combat/engine';
+import { clampPower, effLevel, planVolley, reactorOutput } from '../combat/engine';
 import type {
   CombatShip,
+  CombatState,
+  FireStatus,
   PowerAllocation,
   SubsystemId,
   TargetId,
@@ -60,6 +62,9 @@ export class App {
   private introIndex = 0;
   private geometry: MapGeometry | null = null;
   private combatDraft: CombatDraft | null = null;
+  /** A transient modal layered over the current screen: ship stats or combat help. */
+  private modal: 'ship' | 'combat-help' | null = null;
+  private shipBtn!: HTMLButtonElement;
 
   constructor(
     private store: Store,
@@ -78,6 +83,15 @@ export class App {
     // height changes, mobile URL-bar collapse, orientation) — keeps the
     // hit-test geometry in sync with what's actually on screen.
     new ResizeObserver(() => this.renderMap(this.store.getState())).observe(this.refs.canvas);
+    // Bottom-left "Ship" button: opens ship stats from the map without combat.
+    this.shipBtn = document.createElement('button');
+    this.shipBtn.className = 'shipbtn';
+    this.shipBtn.textContent = 'Ship';
+    this.shipBtn.addEventListener('click', () => {
+      this.modal = 'ship';
+      this.render();
+    });
+    must('map-wrap').appendChild(this.shipBtn);
     store.subscribe(() => this.onStateChange());
   }
 
@@ -126,6 +140,79 @@ export class App {
     this.renderPanel(state);
     this.renderOverlay(state);
     this.renderMap(state);
+    this.renderModal(state);
+    this.shipBtn.style.display = state.phase === 'map' && !this.modal ? 'block' : 'none';
+  }
+
+  /** A modal (ship stats / combat help) layered over whatever the phase drew. */
+  private renderModal(state: RunState): void {
+    if (!this.modal) return;
+    const { overlay } = this.refs;
+    if (this.modal === 'combat-help' && state.phase !== 'combat') {
+      this.modal = null;
+      return;
+    }
+    overlay.hidden = false;
+    overlay.innerHTML = this.modal === 'ship' ? this.shipStatsSheet(state) : this.combatHelpSheet();
+    overlay.querySelector('[data-act="modal-close"]')?.addEventListener('click', () => {
+      this.modal = null;
+      this.render();
+    });
+  }
+
+  private shipStatsSheet(state: RunState): string {
+    const ship = state.ship;
+    const config = this.store.getDeps().config;
+    const weapons = this.store.getDeps().weapons;
+    const rows = (['reactor', 'engines', 'weapons', 'shields', 'sensors'] as const)
+      .map((id) => {
+        const sub = ship.subsystems[id];
+        const eff = Math.max(0, sub.level - sub.damage);
+        const dmg = sub.damage > 0 ? ` <span class="warn">(−${sub.damage} dmg)</span>` : '';
+        return `<div class="statrow"><span>${id}</span><b>${eff}/${sub.level}</b>${dmg}</div>`;
+      })
+      .join('');
+    const wlist = ship.weapons
+      .map((slot) => {
+        const def = weapons.find((w) => w.id === slot.defId) as WeaponDef;
+        const ammo = slot.ammo < 0 ? 'unlimited' : `${slot.ammo} rounds`;
+        return `<div class="statrow"><span>${def.name}</span><b class="dim">${def.type} · ${def.powerCost}⚡ · ${ammo}</b></div>`;
+      })
+      .join('');
+    return `
+      <div class="sheet">
+        <h1>${ship.name}</h1>
+        <div class="hbar"><div class="hfill" style="width:${Math.round((ship.hull / ship.hullMax) * 100)}%"></div><span>HULL ${ship.hull}/${ship.hullMax}</span></div>
+        <p class="dim" style="margin-top:8px">REACTOR POWER POOL: ${reactorOutput(ship)}. In combat you split this across weapons/shields/engines — each channel also can't exceed its subsystem level (shown as allocated/max).</p>
+        <h2 style="margin-top:10px">Subsystems <span class="dim">(effective/level)</span></h2>
+        ${rows}
+        <h2 style="margin-top:10px">Weapons</h2>
+        ${wlist}
+        <p class="dim">Scrap: ${state.scrap} · repair from the map panel (${config.repair.hullPerScrap} hull / scrap).</p>
+        <button class="primary" data-act="modal-close">Close</button>
+      </div>`;
+  }
+
+  private combatHelpSheet(): string {
+    return `
+      <div class="sheet">
+        <h1>How the fight works</h1>
+        <h2>Power</h2>
+        <p>Your reactor makes a fixed number of power bars each turn. You divide them between:
+        <br>• <b>Weapons</b> — how many/which guns can fire (each gun needs a set amount of power).
+        <br>• <b>Shields</b> — rebuilds and sustains your shield layers.
+        <br>• <b>Engines</b> — dodge chance, and charges your escape jump.</p>
+        <p>Each row shows <b>allocated/max</b>. The <b>max</b> is that system's level — a level-3 weapons bay can hold at most 3 power no matter how big your reactor is. The total across all three can't beat your reactor pool.</p>
+        <h2>Weapon lines</h2>
+        <p>Each weapon shows its <b>type</b>, its <b>power cost</b> (the ⚡ number), and <b>ammo</b> (∞ = unlimited). Pick a target part of the enemy ship (Hull to kill it; Weapons/Engines/Shields to cripple it).</p>
+        <p class="warn">If a weapon's power cost is more than the power you've put into Weapons, it will NOT fire — its row turns red and the log says so. Give Weapons more power, or don't target that gun this turn.</p>
+        <h2>The weapon types</h2>
+        <p>• <b>Kinetic</b> — cheap, limited ammo. Shield layers soak it; useless until shields are down.
+        <br>• <b>Laser</b> — power-hungry, strips shield layers fast and burns through once they're gone. Your shield-breaker.
+        <br>• <b>Missile</b> — ignores shields entirely, but the enemy's point-defense may shoot it down. Limited ammo.
+        <br>• <b>Ion</b> — does no hull damage; it disables an enemy subsystem for a while. A setup weapon.</p>
+        <button class="primary" data-act="modal-close">Got it</button>
+      </div>`;
   }
 
   private renderHud(state: RunState): void {
@@ -414,28 +501,50 @@ export class App {
     const pool = reactorOutput(c.player);
     const used = draft.power.engines + draft.power.weapons + draft.power.shields;
 
-    const powerRow = (chan: 'engines' | 'weapons' | 'shields', label: string) => `
+    // allocated/max per channel: max = subsystem effective level; + is also
+    // gated by the reactor pool being full (items 4 & 6 visibility).
+    const powerRow = (chan: 'engines' | 'weapons' | 'shields', label: string) => {
+      const max = effLevel(c.player.subsystems[chan]);
+      const cur = draft.power[chan];
+      const canInc = cur < max && used < pool;
+      return `
       <div class="prow">
         <span>${label}</span>
-        <button data-pw="${chan}" data-d="-1">−</button>
-        <b>${draft.power[chan]}</b>
-        <button data-pw="${chan}" data-d="1">+</button>
+        <button data-pw="${chan}" data-d="-1" ${cur <= 0 ? 'disabled' : ''}>−</button>
+        <b>${cur}/${max}</b>
+        <button data-pw="${chan}" data-d="1" ${canInc ? '' : 'disabled'}>+</button>
       </div>`;
+    };
 
+    // Same fire plan the engine will use, so the warning matches the outcome.
+    const plan: FireStatus[] = planVolley(
+      { ...c.player, power: draft.power },
+      draft.targets,
+      weapons,
+    );
+    const statusNote: Record<FireStatus, string> = {
+      fire: '',
+      hold: '',
+      underpowered: '⚠ not enough weapon power',
+      cooldown: 'recharging',
+      'no-ammo': 'out of ammo',
+      offline: 'weapons offline',
+    };
     const weaponRows = c.player.weapons
       .map((slot, i) => {
         const def = weapons.find((w) => w.id === slot.defId) as WeaponDef;
-        const ready =
-          slot.cooldownLeft === 0 && slot.ammo !== 0 && effLevel(c.player.subsystems.weapons) > 0;
+        const st = plan[i];
+        const selectable = st !== 'offline' && st !== 'no-ammo' && st !== 'cooldown';
         const ammo = slot.ammo < 0 ? '∞' : String(slot.ammo);
-        const cd = slot.cooldownLeft > 0 ? ` · charging` : '';
+        const note = statusNote[st] ? ` <span class="warn">· ${statusNote[st]}</span>` : '';
+        const rowCls = st === 'underpowered' ? 'warn' : selectable ? '' : 'off';
         const btns = TARGET_CHOICES.map(
           (t) =>
-            `<button class="tgt ${draft.targets[i] === t.id ? 'on' : ''}" data-wt="${i}" data-tid="${t.id}" ${ready ? '' : 'disabled'}>${t.short}</button>`,
+            `<button class="tgt ${draft.targets[i] === t.id ? 'on' : ''}" data-wt="${i}" data-tid="${t.id}" ${selectable ? '' : 'disabled'}>${t.short}</button>`,
         ).join('');
         return `
-          <div class="wrow ${ready ? '' : 'off'}">
-            <div class="wname">${def.name} <span class="dim">${def.type} · ${def.powerCost}⚡ · ${ammo}${cd}</span></div>
+          <div class="wrow ${rowCls}">
+            <div class="wname">${def.name} <span class="dim">${def.type} · ${def.powerCost}⚡ · ammo ${ammo}</span>${note}</div>
             <div class="tgts">${btns}</div>
           </div>`;
       })
@@ -444,12 +553,12 @@ export class App {
     const canBribe = c.acceptsBribe && state.scrap >= c.bribeCost;
     overlay.innerHTML = `
       <div class="sheet combat">
-        <h1>Knife Fight — turn ${c.turn}</h1>
-        ${this.shipStatus(c.enemy, c.enemy.name, false)}
+        <div class="chead"><h1>Knife Fight — turn ${c.turn}</h1><button class="explain" data-act="explain">? Explain</button></div>
+        ${this.shipStatus(c.enemy, c.enemy.name, false, c.enemyThreat)}
         <div class="clog">${c.log.map((l) => `<div>${l}</div>`).join('')}</div>
         ${this.shipStatus(c.player, 'Your ship', true)}
         <div class="power">
-          <div class="ptitle">POWER <span class="${used > pool ? 'warn' : 'dim'}">${used}/${pool}</span></div>
+          <div class="ptitle">REACTOR POWER <span class="${used > pool ? 'warn' : 'dim'}">${used}/${pool} used</span> <span class="dim">— each row is allocated/max</span></div>
           ${powerRow('weapons', 'Weapons')}
           ${powerRow('shields', 'Shields')}
           ${powerRow('engines', 'Engines')}
@@ -462,6 +571,11 @@ export class App {
           ${c.acceptsBribe ? `<button data-act="bribe" ${canBribe ? '' : 'disabled'}>Bribe (${c.bribeCost} scrap)</button>` : ''}
         </div>
       </div>`;
+
+    overlay.querySelector('[data-act="explain"]')?.addEventListener('click', () => {
+      this.modal = 'combat-help';
+      this.render();
+    });
 
     overlay.querySelectorAll<HTMLButtonElement>('[data-pw]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -500,7 +614,12 @@ export class App {
     });
   }
 
-  private shipStatus(ship: CombatShip, label: string, mine: boolean): string {
+  private shipStatus(
+    ship: CombatShip,
+    label: string,
+    mine: boolean,
+    threat?: CombatState['enemyThreat'],
+  ): string {
     const pct = Math.max(0, Math.round((ship.hull / ship.hullMax) * 100));
     const shields =
       '●'.repeat(ship.shieldLayers) +
@@ -509,9 +628,11 @@ export class App {
       .filter((id) => ship.subsystems[id].damage > 0)
       .map((id) => id.toUpperCase())
       .join(' ');
+    // Threat band (§7.4): a readable difficulty tag; sensor upgrades sharpen it later.
+    const band = threat ? `<span class="threat t-${threat.toLowerCase()}">${threat}</span>` : '';
     return `
       <div class="shipstat ${mine ? 'mine' : 'foe'}">
-        <div class="sname">${label}</div>
+        <div class="sname">${label} ${band}</div>
         <div class="hbar"><div class="hfill" style="width:${pct}%"></div><span>HULL ${ship.hull}/${ship.hullMax}</span></div>
         <div class="dim">shields ${shields || '—'}${disabled ? ` · offline: ${disabled}` : ''}</div>
       </div>`;

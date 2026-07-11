@@ -1,7 +1,33 @@
 [
   {
+    "id": "derelict-scavenger",
+    "name": "Scavenger Skiff",
+    "className": "Skiff",
+    "threat": "GREEN",
+    "hullMax": 8,
+    "subsystems": {
+      "reactor": 2,
+      "engines": 1,
+      "weapons": 1,
+      "shields": 0,
+      "sensors": 1,
+      "lifeSupport": 1,
+      "medbay": 0,
+      "comms": 0
+    },
+    "pdChance": 0.1,
+    "weapons": ["enemy-slugthrower"],
+    "doctrine": "aggressive",
+    "salvageScrap": 2,
+    "salvageFuel": 0,
+    "acceptsSurrender": true,
+    "acceptsBribe": true
+  },
+  {
     "id": "gunship",
     "name": "Void Jackal Skirmisher",
+    "className": "Skirmisher",
+    "threat": "SEASONED",
     "hullMax": 14,
     "subsystems": {
       "reactor": 3,
@@ -24,6 +50,8 @@
   {
     "id": "missile-boat",
     "name": "Ashfall Missile Boat",
+    "className": "Missile Boat",
+    "threat": "SEASONED",
     "hullMax": 12,
     "subsystems": {
       "reactor": 3,
@@ -46,6 +74,8 @@
   {
     "id": "shield-fortress",
     "name": "Ashen Choir Bastion",
+    "className": "Bastion",
+    "threat": "VETERAN",
     "hullMax": 22,
     "subsystems": {
       "reactor": 4,

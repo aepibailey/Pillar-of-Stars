@@ -379,3 +379,90 @@ button .sub {
   font-size: 12px;
   color: var(--dim);
 }
+
+/* ---------- Ship button (map, bottom-left) ---------- */
+.shipbtn {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  background: rgba(12, 17, 32, 0.9);
+  border-color: var(--accent);
+  color: var(--accent);
+  z-index: 5;
+}
+
+/* ---------- Combat header + explain ---------- */
+.chead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.chead h1 {
+  margin-bottom: 0;
+}
+.explain {
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- Threat band ---------- */
+.threat {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  vertical-align: middle;
+}
+.t-green {
+  color: var(--good);
+}
+.t-seasoned {
+  color: var(--accent);
+}
+.t-veteran {
+  color: var(--gold);
+}
+.t-elite {
+  color: var(--bad);
+}
+.t-unknown {
+  color: var(--dim);
+}
+
+/* underpowered weapon row */
+.wrow.warn .wname {
+  color: var(--bad);
+}
+
+/* ---------- Ship stats / help rows ---------- */
+.statrow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(27, 37, 64, 0.5);
+}
+.statrow span {
+  flex: 1;
+  text-transform: capitalize;
+}
+.statrow b {
+  color: var(--accent);
+}
+.sheet h2 {
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}

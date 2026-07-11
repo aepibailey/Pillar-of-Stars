@@ -1,4 +1,4 @@
-import { weapons, enemies, playerDef, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -10,7 +10,7 @@ import type { EventDef, EventOutcome } from '../src/events/types';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config, weapons, enemies, playerDef };
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames };
 
 const decoyRuin = events.find((e) => e.id === 'ruin-silent-site') as EventDef;
 

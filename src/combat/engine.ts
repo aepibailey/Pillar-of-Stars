@@ -19,6 +19,7 @@ import type {
   CombatState,
   EnemyArchetype,
   EnemyDoctrine,
+  FireStatus,
   PlayerShipDef,
   PowerAllocation,
   Subsystem,
@@ -64,6 +65,10 @@ function makeWeaponSlots(defs: readonly WeaponDef[], ids: string[]): WeaponSlot[
  * own effective subsystem level.
  */
 export function clampPower(ship: CombatShip, req: PowerAllocation): PowerAllocation {
+  // TWO constraints, both surfaced in the UI as "allocated/max":
+  //  1. each channel is capped at its subsystem's effective level (a level-3
+  //     weapons bay accepts at most 3 power; damage lowers this), and
+  //  2. the total across channels can't exceed the reactor pool.
   const capEngines = Math.min(
     Math.max(0, Math.floor(req.engines)),
     effLevel(ship.subsystems.engines),
@@ -158,12 +163,14 @@ export interface StartCombatArgs {
   origin: CombatOrigin;
   /** 'fast' Wake-space approach grants a flee-charge head start. */
   fleeHeadstart?: number;
+  /** Override the enemy's display name (Wake ships get a brutal generated name). */
+  enemyNameOverride?: string;
 }
 
 export function startCombat(args: StartCombatArgs): CombatState {
   const { archetype, weaponDefs, config, playerShip } = args;
   const enemy = makeCombatShip(
-    archetype.name,
+    args.enemyNameOverride ?? archetype.name,
     archetype.hullMax,
     archetype.subsystems,
     archetype.pdChance,
@@ -179,9 +186,10 @@ export function startCombat(args: StartCombatArgs): CombatState {
     player,
     enemy,
     enemyArchetypeId: archetype.id,
+    enemyThreat: archetype.threat,
     doctrine: archetype.doctrine,
     turn: 1,
-    log: [`A ${archetype.name} closes to knife-fight range.`],
+    log: [`A ${args.enemyNameOverride ?? archetype.name} closes to knife-fight range.`],
     rngState: rng.getState(),
     outcome: 'ongoing',
     fleeThreshold: config.fleeThreshold,
@@ -197,6 +205,30 @@ export function startCombat(args: StartCombatArgs): CombatState {
 
 // ---------- resolution ----------
 
+/**
+ * Decide, per weapon, whether it fires this volley and — if not — why. The UI
+ * and the resolution share this so the warning the player sees BEFORE firing
+ * matches exactly what the log reports AFTER (playtest items 4 & 5).
+ */
+export function planVolley(
+  ship: CombatShip,
+  targets: (TargetId | null)[],
+  weaponDefs: readonly WeaponDef[],
+): FireStatus[] {
+  const offline = effLevel(ship.subsystems.weapons) <= 0;
+  let powerLeft = ship.power.weapons;
+  return ship.weapons.map((slot, i) => {
+    if (targets[i] == null) return 'hold';
+    if (offline) return 'offline';
+    const def = weaponDef(weaponDefs, slot.defId);
+    if (slot.cooldownLeft > 0) return 'cooldown';
+    if (slot.ammo === 0) return 'no-ammo';
+    if (def.powerCost > powerLeft) return 'underpowered';
+    powerLeft -= def.powerCost;
+    return 'fire';
+  });
+}
+
 function fireVolley(
   attacker: CombatShip,
   defender: CombatShip,
@@ -207,22 +239,34 @@ function fireVolley(
   log: string[],
   attackerLabel: string,
 ): void {
-  if (effLevel(attacker.subsystems.weapons) <= 0) {
-    log.push(`${attackerLabel} weapons are offline.`);
-    return;
-  }
-  let powerLeft = attacker.power.weapons;
+  const plan = planVolley(attacker, targets, weaponDefs);
+  // Every targeted weapon reports SOMETHING — a hit, a miss, or why it held
+  // fire. Untargeted weapons ('hold') are silent by design (you chose not to).
   attacker.weapons.forEach((slot, i) => {
-    const target = targets[i];
-    if (!target) return;
     const def = weaponDef(weaponDefs, slot.defId);
-    if (slot.cooldownLeft > 0) return;
-    if (slot.ammo === 0) return;
-    if (def.powerCost > powerLeft) return;
-    powerLeft -= def.powerCost;
-    if (slot.ammo > 0) slot.ammo -= 1;
-    slot.cooldownLeft = def.cooldown ?? 0;
-    resolveHit(def, defender, target, config, rng, log, attackerLabel);
+    switch (plan[i]) {
+      case 'hold':
+        return;
+      case 'offline':
+        log.push(`${attackerLabel}'s ${def.name} — weapons systems are offline, cannot fire.`);
+        return;
+      case 'cooldown':
+        log.push(`${attackerLabel}'s ${def.name} — still recharging, holds fire.`);
+        return;
+      case 'no-ammo':
+        log.push(`${attackerLabel}'s ${def.name} — out of ammunition.`);
+        return;
+      case 'underpowered':
+        log.push(
+          `${attackerLabel}'s ${def.name} — NOT ENOUGH POWER to fire (needs ${def.powerCost} weapon power).`,
+        );
+        return;
+      case 'fire':
+        if (slot.ammo > 0) slot.ammo -= 1;
+        slot.cooldownLeft = def.cooldown ?? 0;
+        resolveHit(def, defender, targets[i] as TargetId, config, rng, log, attackerLabel);
+        return;
+    }
   });
 }
 

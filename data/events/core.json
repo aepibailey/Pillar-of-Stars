@@ -492,8 +492,8 @@
           },
           {
             "weight": 1,
-            "text": "The 'beacon' is bait — a scavenger snare rigged to mag-clamp your airlock. You tear free with dented plating and your dignity somewhere back in the debris field.",
-            "effects": { "scrap": -2 }
+            "text": "The 'beacon' is bait. A scavenger skiff was tucked in the wreckage the whole time, and the moment your airlock mates it powers up and comes for your hull. It's a small thing — but small things kill you just as dead out here.",
+            "effects": { "launchCombat": "derelict-scavenger" }
           }
         ]
       },

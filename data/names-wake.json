@@ -1,0 +1,23 @@
+{
+  "_note": "Wake vessels only — a deliberately brutal, genocidal-empire naming pool, kept SEPARATE from the general/faction ship-name pool. Wake ship display name = '<name> <className>' (e.g. 'Cruel Awakening Missile Boat'). The general ship-name pool wants more entries in a later pass.",
+  "wakeShips": [
+    "Cruel Awakening",
+    "Dark Devourer",
+    "Ashen Verdict",
+    "Hymn of Cinders",
+    "Unrelenting",
+    "Final Mercy",
+    "Gravebound",
+    "Sanctified Ruin",
+    "Iron Requiem",
+    "Wrath Made Manifest",
+    "The Long Silence",
+    "Ceaseless",
+    "Pyre of Nations",
+    "Judgement Absolute",
+    "Sorrowmaker",
+    "Blackened Halo",
+    "Extinction's Herald",
+    "Cold Absolution"
+  ]
+}

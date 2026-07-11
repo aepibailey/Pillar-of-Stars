@@ -46,6 +46,8 @@ export interface Deps {
   weapons: readonly WeaponDef[];
   enemies: readonly EnemyArchetype[];
   playerDef: PlayerShipDef;
+  /** Brutal name pool for Wake vessels (§9.1); separate from other factions. */
+  wakeShipNames: readonly string[];
 }
 
 /** Build a fresh player ship (§5) from the data-driven class definition. */
@@ -224,15 +226,22 @@ function launchCombat(
   origin: CombatOrigin,
   fleeHeadstart: number,
 ): void {
-  const { config, weapons, enemies, playerDef } = deps;
+  const { config, weapons, enemies, playerDef, wakeShipNames } = deps;
+  const rng = new Rng(state.rngState.events);
   let archetype: EnemyArchetype;
   if (archetypeId === 'random') {
-    const rng = new Rng(state.rngState.events);
     archetype = rng.pick(enemies);
-    state.rngState.events = rng.getState();
   } else {
     archetype = enemies.find((e) => e.id === archetypeId) ?? enemies[0];
   }
+  // Wake vessels get a distinct, brutal generated name from their own pool
+  // (§9.1); other foes keep their faction archetype name.
+  const enemyNameOverride =
+    origin === 'wake-space' && wakeShipNames.length > 0
+      ? `${rng.pick(wakeShipNames)} ${archetype.className}`
+      : undefined;
+  state.rngState.events = rng.getState();
+
   const encounterId = String(state.stats.combats);
   state.stats.combats++;
   state.combat = startCombat({
@@ -245,6 +254,7 @@ function launchCombat(
     config: config.combat,
     origin,
     fleeHeadstart,
+    enemyNameOverride,
   });
   state.phase = 'combat';
 }
@@ -272,7 +282,10 @@ function applyCombatResult(state: RunState, config: GameConfig): void {
     state.scrap += c.salvageScrap;
     state.fuel += c.salvageFuel;
   } else if (c.outcome === 'surrendered') {
-    state.scrap = Math.max(0, state.scrap - c.surrenderScrapCost);
+    // Surrender is meant to hurt (playtest patch): they strip the hold bare and
+    // siphon half your fuel before letting you limp away.
+    state.scrap = 0;
+    state.fuel = Math.floor(state.fuel / 2);
   } else if (c.outcome === 'bribed') {
     state.scrap = Math.max(0, state.scrap - c.bribeCost);
   }

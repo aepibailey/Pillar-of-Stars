@@ -75,6 +75,12 @@ export interface CombatShip {
 
 export type CombatOutcome = 'ongoing' | 'won' | 'lost' | 'fled' | 'surrendered' | 'bribed';
 
+/** Readable enemy difficulty (§7.4). UNKNOWN when sensors can't get a read. */
+export type ThreatBand = 'GREEN' | 'SEASONED' | 'VETERAN' | 'ELITE' | 'UNKNOWN';
+
+/** Per-weapon firing decision for a volley — drives both resolution and the UI. */
+export type FireStatus = 'fire' | 'hold' | 'underpowered' | 'cooldown' | 'no-ammo' | 'offline';
+
 /** Where the fight came from — decides how results are applied to the run. */
 export type CombatOrigin = 'wake-space' | 'hostile-event';
 
@@ -82,6 +88,8 @@ export interface CombatState {
   player: CombatShip;
   enemy: CombatShip;
   enemyArchetypeId: string;
+  /** Readable threat band shown in combat (§7.4). */
+  enemyThreat: ThreatBand;
   doctrine: EnemyDoctrine;
   turn: number;
   log: string[];
@@ -103,6 +111,9 @@ export type EnemyDoctrine = 'aggressive' | 'bombard' | 'grind';
 export interface EnemyArchetype {
   id: string;
   name: string;
+  /** Short hull-class label, appended to Wake ship names (e.g. "Skirmisher"). */
+  className: string;
+  threat: ThreatBand;
   hullMax: number;
   subsystems: Record<SubsystemId, number>;
   pdChance: number;

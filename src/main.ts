@@ -2,6 +2,7 @@ import configJson from '../data/config.json';
 import enemiesJson from '../data/enemies.json';
 import eventsJson from '../data/events/core.json';
 import introJson from '../data/intro.json';
+import namesWakeJson from '../data/names-wake.json';
 import shipPlayerJson from '../data/ship-player.json';
 import weaponsJson from '../data/weapons.json';
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from './combat/types';
@@ -22,7 +23,8 @@ const events = eventsJson as unknown as EventDef[];
 const weapons = weaponsJson as WeaponDef[];
 const enemies = enemiesJson as unknown as EnemyArchetype[];
 const playerDef = shipPlayerJson as unknown as PlayerShipDef;
-const deps: Deps = { events, config, weapons, enemies, playerDef };
+const wakeShipNames = (namesWakeJson as { wakeShips: string[] }).wakeShips;
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames };
 const introFrames = (introJson as { frames: IntroFrame[] }).frames;
 
 function freshSeed(): string {

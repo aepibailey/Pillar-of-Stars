@@ -75,7 +75,17 @@ describe('combat construction & power', () => {
       for (const w of a.weapons) expect(weaponDefs.some((d) => d.id === w)).toBe(true);
     }
     for (const w of playerDef.weapons) expect(weaponDefs.some((d) => d.id === w)).toBe(true);
-    expect(enemies.map((e) => e.id).sort()).toEqual(['gunship', 'missile-boat', 'shield-fortress']);
+    expect(enemies.map((e) => e.id).sort()).toEqual([
+      'derelict-scavenger',
+      'gunship',
+      'missile-boat',
+      'shield-fortress',
+    ]);
+    // Every archetype carries a threat band and hull-class label (patch fields).
+    for (const a of enemies) {
+      expect(a.threat).toBeTruthy();
+      expect(a.className).toBeTruthy();
+    }
   });
 
   it('reactor output caps total power; clampPower sheds the overflow', () => {

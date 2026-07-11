@@ -4,6 +4,7 @@ import enemiesJson from '../data/enemies.json';
 import eventsJson from '../data/events/core.json';
 import shipPlayerJson from '../data/ship-player.json';
 import weaponsJson from '../data/weapons.json';
+import wakeNamesJson from '../data/names-wake.json';
 import { buildPlayerShip, createRun, type Deps } from '../src/engine/reducer';
 import type { GameConfig, RunState, ShipState } from '../src/engine/types';
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from '../src/combat/types';
@@ -14,8 +15,9 @@ export const events = eventsJson as unknown as EventDef[];
 export const weapons = weaponsJson as WeaponDef[];
 export const enemies = enemiesJson as unknown as EnemyArchetype[];
 export const playerDef = shipPlayerJson as unknown as PlayerShipDef;
+export const wakeShipNames = (wakeNamesJson as { wakeShips: string[] }).wakeShips;
 
-export const deps: Deps = { events, config, weapons, enemies, playerDef };
+export const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames };
 
 export function makeDeps(overrides: Partial<Deps> = {}): Deps {
   return { ...deps, ...overrides };

@@ -214,3 +214,33 @@ Gunship (evasion + targeting), Missile Boat (forces point-defense), Shield Fortr
 - **M1–M3 is the fun test.** M2 combat wants a playtest: are the three fights readable and distinct? Is the power split a real decision at reactor 4? Tuning knobs (weapon damage, hull totals, evasion, salvage) are all in `/data`.
 - Combat balance numbers are first-pass guesses — expect a tuning patch.
 - Next milestone is **M3 (Boots and Blasters):** personal combat + boarding (disable weapons+engines → neutralize/subdue/ally) + threat bands with sensor-based intel — at which point the stranded robbery becomes a real boarding fight and the enemy-read layer (§7.4) arrives.
+
+---
+
+## Session 7 — 2026-07-11 · M2 playtest patch 1 (combat bugs, feedback, UX)
+
+### Root-cause findings (reported before fixing, per request)
+
+- **Item 6 — the "4 power but only 3 to weapons" cap.** `clampPower` capped each channel at the subsystem's effective level. The player ship's **weapons subsystem is level 3** (`ship-player.json`) while the reactor is level 4, so the weapons channel was capped at 3 — not a slot limit, the per-channel subsystem-level cap. **Designer decision:** keep the cap (it's meaningful — your weapons bay really is level 3), but **make it visible.** Reverted my initial "allow full pool" change; each power row now reads **allocated/max** (e.g. `3/3`), the `+` button disables at the channel max or when the reactor pool is full, and the Ship panel + Explain screen both spell the rule out.
+- **Item 4/5 — silent weapon skips.** `fireVolley` `return`ed with no log when a targeted weapon couldn't fire (cooldown, no ammo, or `powerCost > weapon power`). `resolveHit` always logged, so the only silent path was these pre-fire skips — including the laser-vs-hull "no report" case (it was starved of weapon power).
+
+### What changed
+
+1. **Derelict traps → real combat (§10):** the distress-beacon "bait" outcome now launches a fight against a new **weak GREEN archetype** (`derelict-scavenger`, hull 8) via `launchCombat`, replacing the M1 flat scrap loss.
+2. **Explain button (in-combat):** a `? Explain` opens a plain-language help modal — power allocation, the allocated/max rule, the four weapon types, weapon-line numbers, and the under-power rule.
+3. **Ship stats from the map:** a bottom-left **Ship** button opens a stats modal (hull, reactor pool, per-subsystem effective/level, weapons + ammo) without entering combat or repair.
+4. **Under-power made loud:** shared `planVolley()` decides per-weapon fire status for BOTH the engine and the UI, so the warning matches the outcome. An under-powered targeted weapon turns its row **red** with "not enough weapon power", and firing logs "**NOT ENOUGH POWER**". Cooldown/no-ammo/offline are also flagged and logged.
+5. **Every weapon reports every turn:** `fireVolley` now emits a log line for every targeted weapon — hit, miss, or the reason it held fire. Untargeted weapons stay silent (you chose not to fire them).
+6. **Power cap surfaced:** allocated/max per channel, as above.
+7. **Threat band in combat (§7.4):** each archetype carries a `threat` band (GREEN/SEASONED/VETERAN/ELITE), shown next to the enemy name. Sensor-based sharpening/UNKNOWN is a later milestone; for now it shows the best read.
+8. **Surrender hurts:** now **loses all scrap and half current fuel** (was a token scrap loss).
+9. **Wake ship names:** a dedicated brutal name pool (`data/names-wake.json` — "Cruel Awakening", "Dark Devourer", …), used only for **wake-space** fights as "`<name> <class>`". Other factions keep their archetype names. Archetypes gained a `className` (Skirmisher/Missile Boat/Bastion/Skiff). Noted in-file: the general ship-name pool still wants more entries in a later pass.
+
+### Verification
+
+**147 tests** (10 new patch tests): planVolley classification, the "NOT ENOUGH POWER" log, every-weapon-reports, the weapons-level cap still holding at 3, threat band in state, wake naming vs faction naming, painful surrender, and the derelict-trap → scavenger-combat path. Build + lint clean. Combat smoke at 390×844 exercises the fight, the Explain modal, and the Ship panel with zero console errors.
+
+### Note for later
+
+- Sensor upgrades should sharpen the threat read (and introduce UNKNOWN) — M3 sensor/intel work.
+- General (non-Wake) ship/faction name pool needs expansion — not blocking.
