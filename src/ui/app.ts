@@ -15,6 +15,7 @@ import type {
   WeaponDef,
 } from '../combat/types';
 import { getEvent } from '../events/engine';
+import type { EventOption } from '../events/types';
 import {
   canBoard,
   currentSector,
@@ -30,6 +31,7 @@ import type { FireMode, GroundAction, GroundState } from '../ground/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
 import {
+  readProbability,
   readThreat,
   sensorTier,
   THREAT_ORDER,
@@ -66,6 +68,19 @@ function missileInterceptRead(enemy: CombatShip, def: WeaponDef): string {
   const effective = coverage * enemy.pdChance; // rough expected fraction stopped
   const band = effective <= 0.12 ? 'low' : effective <= 0.3 ? 'moderate' : 'high';
   return salvo > cap ? `${band} · salvo overwhelms` : band;
+}
+
+/**
+ * The true probability an event option advances the Wake — the fraction of its
+ * outcome weight tagged with a wakeAdvance. Feeds the §7.4 sensor read so the
+ * player sees a probe's transmit/spotted risk (or any Wake-risky choice) before
+ * committing. Returns null when nothing about the option can wake the hunt.
+ */
+function optionWakeRisk(opt: EventOption): number | null {
+  const total = opt.outcomes.reduce((s, o) => s + o.weight, 0);
+  if (total <= 0) return null;
+  const bad = opt.outcomes.reduce((s, o) => s + ((o.effects?.wakeAdvance ?? 0) > 0 ? o.weight : 0), 0);
+  return bad > 0 ? bad / total : null;
 }
 
 export interface IntroFrame {
@@ -550,12 +565,22 @@ export class App {
     overlay.hidden = false;
 
     if (state.activeEvent.stage === 'options') {
+      // Sensor read (§7.4): any option that can advance the Wake gets a
+      // sensor-scaled risk estimate — this is the probe transmit/spotted preview,
+      // generalized to any wakeAdvance outcome. Fuzzy at low sensors, a rough %
+      // at high, "no reading" when sensors are down.
+      const tier = sensorTier(effLevel(state.ship.subsystems.sensors));
       let html = `<div class="sheet"><h1>${def.title}</h1><p>${def.text}</p>`;
       def.options.forEach((opt, i) => {
         const req = opt.requires;
         const unmet =
           req !== undefined && ((req.scrap ?? 0) > state.scrap || (req.fuel ?? 0) > state.fuel);
-        html += `<button class="primary" data-opt="${i}" ${unmet ? 'disabled' : ''}>${opt.label}${unmet ? '<span class="sub">not enough resources</span>' : ''}</button>`;
+        const risk = optionWakeRisk(opt);
+        const riskHint =
+          risk !== null && risk > 0
+            ? `<span class="sub">Wake risk ${readProbability(risk, tier, `${state.seed}:evrisk:${def.id}:${state.activeEvent?.nodeId ?? 'x'}`, `opt${i}`).text}</span>`
+            : '';
+        html += `<button class="primary" data-opt="${i}" ${unmet ? 'disabled' : ''}>${opt.label}${unmet ? '<span class="sub">not enough resources</span>' : riskHint}</button>`;
       });
       html += '</div>';
       overlay.innerHTML = html;
