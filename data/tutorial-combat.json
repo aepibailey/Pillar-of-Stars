@@ -1,0 +1,37 @@
+{
+  "_note": "Scripted first-combat tutorial (end-of-M2). UI-only coach cards shown over the very first ship fight; dismissed once, persistently. Content is data so it can change without touching engine or UI code.",
+  "steps": [
+    {
+      "title": "Your first fight",
+      "text": "A ship has you in its sights. Ship combat is turn-based, and it's SIMULTANEOUS: you set up your whole turn, then hit Fire — and both ships act at the same instant. Let's walk the screen once."
+    },
+    {
+      "title": "The enemy (top box)",
+      "text": "That's the ship trying to kill you. The coloured tag — GREEN, SEASONED, VETERAN, ELITE — is how dangerous they are. The bar is their hull; drop it to zero and they come apart."
+    },
+    {
+      "title": "Your ship",
+      "text": "Below the log is your own ship and hull bar. If your hull hits zero, the run is over. You are not obliged to win every fight — Flee and Bribe are real options."
+    },
+    {
+      "title": "Reactor power",
+      "text": "Your reactor makes a few power bars each turn. You divide them between Weapons, Shields and Engines with the − and + buttons. Each row reads allocated/max — the max is that system's level, and the three together can't beat your reactor pool. You can't power everything; that choice IS the fight."
+    },
+    {
+      "title": "What each channel does",
+      "text": "Weapons power = how many guns can fire. Shields power = rebuilds your shield layers. Engines power = your dodge chance, and it charges your escape jump if you Flee."
+    },
+    {
+      "title": "Your weapons",
+      "text": "Each weapon shows its type, its power cost (the ⚡ number) and its ammo (∞ = unlimited). Kinetics are cheap but bounce off shields; lasers strip shields away; missiles ignore shields but can be shot down; ion disables an enemy system without touching their hull."
+    },
+    {
+      "title": "Red means it won't fire",
+      "text": "If a gun's power cost is higher than the power you've put into Weapons, its row turns RED and it will NOT fire that turn — the log will say so. Give Weapons more power, or don't target that gun this turn."
+    },
+    {
+      "title": "Target, then Fire",
+      "text": "Tap a part of the enemy for each gun you want to fire — Hull to kill them, or Weapons / Engines / Shields to cripple them. Then hit Fire and both sides' shots resolve together. The ? Explain button up top repeats all of this any time. Good hunting."
+    }
+  ]
+}

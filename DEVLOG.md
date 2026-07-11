@@ -275,3 +275,34 @@ Locked in now so later combat features build on the correct resolution model. 3 
 Per the designer: the player's very first fight should be a guided encounter that explains each combat element (subsystem power allocation, weapon types, power-cost/ammo readouts, the insufficient-power warning) inline as it comes up, instead of relying on the `? Explain` button.
 
 **Do NOT build until the closing task of M2**, after the current round of combat UI bugs/fixes has stabilized (silent weapon fire ✓, power-allocation cap ✓, combat-log reporting ✓, simultaneous turn model ✓ — all now done), so the tutorial script isn't written against a moving UI. Requires explicit designer sign-off before starting. Reference: this prompt (Session 8, item 2). Logged so it isn't forgotten.
+
+---
+
+## Session 9 — 2026-07-11 · Scripted first-combat tutorial built — M2 COMPLETE
+
+Designer signed off ("execute all remaining end of M2 tasks"), so the deferred first-combat tutorial (Session 8, item c) is now built. This was the closing task of M2.
+
+### What was built — data-driven coach cards over the first real fight
+
+A guided overlay that walks the player through the combat screen the **first time** they ever enter a ship fight, then never shows again. It layers explanations on whatever the first fight actually is — it does **not** force a scripted weak enemy (a possible follow-up; flagged below).
+
+- **Content is data:** `data/tutorial-combat.json` — 8 steps (`{ title, text }`), so the script can change without touching engine or UI code (per the non-negotiable). Steps cover, in order: the simultaneous turn model → the enemy box + threat band → your ship/hull + Flee & Bribe are real options → reactor power and the allocated/max cap → what each channel (weapons/shields/engines) does → the four weapon types with power-cost/ammo readouts → the red "won't fire" under-power warning → target-then-Fire.
+- **UI-only, engine-untouched:** implemented entirely in `src/ui/app.ts` as a fixed bottom coach card (`.tut`/`.tutcard`, gold border, z-index 20 over the combat sheet). No reducer, no combat-engine, no save-schema change.
+- **Persistent, one-time:** dismissal is stored in `localStorage` under `pillar-of-stars.tutorial.combat`. `maybeActivateTutorial` arms it only when a live fight starts (`phase === 'combat'` && `outcome === 'ongoing'`) and it hasn't been completed; walking to the last step ("Start fighting") or Skip marks it done. It hides while any modal (Explain/Ship) is open and re-appears after.
+- **The `? Explain` button still exists** as the always-available repeat reference; the tutorial is the once-only inline version the designer asked for.
+
+### Verification
+
+- New `scripts/smoke-tutorial.mjs` (390×844): confirms the card appears on the **first** fight, walks all 8 steps, disappears after the walk, and does **NOT** reappear on the **second** fight — zero console errors.
+- Fixed a self-inflicted interaction: because the coach card overlays the bottom of the combat sheet (where Fire lives), `scripts/smoke-combat.mjs` now pre-sets the tutorial-done flag after clearing localStorage, so it tests combat mechanics without the card intercepting Fire. (Real players click through the card first, so Fire is never blocked in play.)
+- Also fixed a stale-DOM bug found while wiring this: `renderTutorial` now clears `tutorialEl.innerHTML` when inactive, so a hidden card can't leave an invisible-but-clickable button behind.
+- **150 tests green** (no engine change, so no new unit tests — the tutorial is UI-only and covered by the smoke). Build + tsc + lint clean. smoke, smoke-combat, smoke-tutorial all pass.
+
+### M2 status — COMPLETE
+
+The Knife Fight (§14) is done: ship subsystem model, power management with the allocated/max cap, four weapon types, three+ archetypes with threat bands, simultaneous turn resolution, surrender/flee/bribe, derelict-trap → combat, Wake ship naming, and now the first-combat tutorial.
+
+### Notes for later / open forks
+
+- **Tutorial rides the real first fight, not a scripted soft opener.** If the very first hostile roll is a tough archetype, the tutorial explains the screen but the fight itself can still be brutal. If we'd rather guarantee a gentle first encounter, that's a separate change (bias the first hostile roll toward `derelict-scavenger`/GREEN) — flagging for a designer call, not building unprompted.
+- Sensor upgrades → sharpen threat read + UNKNOWN (M3). General non-Wake name pool still wants expansion. Both unchanged from Session 7/8.

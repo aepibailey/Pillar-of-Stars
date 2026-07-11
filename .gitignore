@@ -3,3 +3,8 @@ dist/
 coverage/
 *.local
 .DS_Store
+
+# Smoke-test screenshot outputs
+csmoke/
+smoke/
+tut/

@@ -4,6 +4,7 @@ import eventsJson from '../data/events/core.json';
 import introJson from '../data/intro.json';
 import namesWakeJson from '../data/names-wake.json';
 import shipPlayerJson from '../data/ship-player.json';
+import tutorialCombatJson from '../data/tutorial-combat.json';
 import weaponsJson from '../data/weapons.json';
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from './combat/types';
 import { buildPlayerShip, createRun, type Deps } from './engine/reducer';
@@ -11,7 +12,7 @@ import { loadRun } from './engine/save';
 import { Store } from './engine/store';
 import type { GameConfig } from './engine/types';
 import type { EventDef } from './events/types';
-import { App, type IntroFrame } from './ui/app';
+import { App, type IntroFrame, type TutorialStep } from './ui/app';
 
 const query = new URLSearchParams(location.search);
 const baseConfig = configJson as GameConfig;
@@ -26,6 +27,7 @@ const playerDef = shipPlayerJson as unknown as PlayerShipDef;
 const wakeShipNames = (namesWakeJson as { wakeShips: string[] }).wakeShips;
 const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames };
 const introFrames = (introJson as { frames: IntroFrame[] }).frames;
+const tutorialCombat = (tutorialCombatJson as { steps: TutorialStep[] }).steps;
 
 function freshSeed(): string {
   // Seed selection is the ONE place non-determinism is allowed. ?seed=X pins it.
@@ -41,7 +43,7 @@ const initial =
     : createRun(freshSeed(), config, buildPlayerShip(playerDef, weapons));
 
 const store = new Store(initial, deps);
-const app = new App(store, introFrames, () => {
+const app = new App(store, introFrames, tutorialCombat, () => {
   store.dispatch({ type: 'NEW_RUN', seed: freshSeed() });
 });
 app.start();

@@ -466,3 +466,58 @@ button .sub {
   color: var(--accent);
   margin-bottom: 4px;
 }
+
+/* ---------- First-combat tutorial coach card ---------- */
+.tut {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  padding: 0 10px calc(12px + env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+.tutcard {
+  pointer-events: auto;
+  width: min(94vw, 460px);
+  background: #0e1530;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 12px 14px 14px;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+}
+.tuthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.tutskip {
+  width: auto;
+  min-height: 32px;
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--dim);
+  border-color: var(--panel-edge);
+}
+.tutcard h3 {
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.tutcard p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.tutcard .primary {
+  margin: 0;
+  text-align: center;
+}

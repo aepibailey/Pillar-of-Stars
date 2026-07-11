@@ -49,6 +49,14 @@ export interface IntroFrame {
   text: string;
 }
 
+export interface TutorialStep {
+  title: string;
+  text: string;
+}
+
+/** Persistent "seen the combat tutorial" marker — once ever, across runs. */
+const COMBAT_TUTORIAL_KEY = 'pillar-of-stars.tutorial.combat';
+
 interface UiRefs {
   hud: HTMLElement;
   panel: HTMLElement;
@@ -65,10 +73,13 @@ export class App {
   /** A transient modal layered over the current screen: ship stats or combat help. */
   private modal: 'ship' | 'combat-help' | null = null;
   private shipBtn!: HTMLButtonElement;
+  /** Current step of the first-combat tutorial, or null when inactive/done. */
+  private tutorialStep: number | null = null;
 
   constructor(
     private store: Store,
     private introFrames: IntroFrame[],
+    private tutorialSteps: TutorialStep[],
     private newRun: () => void,
   ) {
     this.refs = {
@@ -92,7 +103,44 @@ export class App {
       this.render();
     });
     must('map-wrap').appendChild(this.shipBtn);
+    // First-combat tutorial coach card (its own layer so it never clobbers the
+    // combat sheet's HTML).
+    this.tutorialEl = document.createElement('div');
+    this.tutorialEl.className = 'tut';
+    this.tutorialEl.style.display = 'none';
+    must('app').appendChild(this.tutorialEl);
     store.subscribe(() => this.onStateChange());
+  }
+
+  private tutorialEl!: HTMLDivElement;
+
+  private tutorialDone(): boolean {
+    try {
+      return localStorage.getItem(COMBAT_TUTORIAL_KEY) === 'done';
+    } catch {
+      return false;
+    }
+  }
+
+  private markTutorialDone(): void {
+    try {
+      localStorage.setItem(COMBAT_TUTORIAL_KEY, 'done');
+    } catch {
+      /* private mode / no storage — just don't show it again this session */
+    }
+    this.tutorialStep = null;
+  }
+
+  /** Arm the tutorial on the first live fight; clear it once combat is over. */
+  private maybeActivateTutorial(state: RunState): void {
+    const inFight = state.phase === 'combat' && state.combat?.outcome === 'ongoing';
+    if (inFight) {
+      if (this.tutorialStep === null && !this.tutorialDone() && this.tutorialSteps.length > 0) {
+        this.tutorialStep = 0;
+      }
+    } else {
+      this.tutorialStep = null;
+    }
   }
 
   start(): void {
@@ -132,6 +180,7 @@ export class App {
 
   private render(): void {
     const state = this.store.getState();
+    this.maybeActivateTutorial(state);
     // Map draws LAST: the HUD/panel/overlay mutations above can change the
     // canvas's flex-allotted size, and drawMap must measure the settled
     // layout or its hit-test geometry is stale (the "taps don't register"
@@ -141,7 +190,43 @@ export class App {
     this.renderOverlay(state);
     this.renderMap(state);
     this.renderModal(state);
+    this.renderTutorial(state);
     this.shipBtn.style.display = state.phase === 'map' && !this.modal ? 'block' : 'none';
+  }
+
+  /** The first-combat coach card, layered over the combat screen (data-driven). */
+  private renderTutorial(state: RunState): void {
+    const active =
+      this.tutorialStep !== null &&
+      !this.modal &&
+      state.phase === 'combat' &&
+      state.combat?.outcome === 'ongoing';
+    this.tutorialEl.style.display = active ? 'block' : 'none';
+    if (!active || this.tutorialStep === null) {
+      this.tutorialEl.innerHTML = ''; // clear stale card so it's fully gone
+      return;
+    }
+
+    const step = this.tutorialSteps[this.tutorialStep];
+    const n = this.tutorialSteps.length;
+    const last = this.tutorialStep >= n - 1;
+    this.tutorialEl.innerHTML = `
+      <div class="tutcard">
+        <div class="tuthead">TUTORIAL · ${this.tutorialStep + 1}/${n}<button class="tutskip" data-act="tut-skip">Skip ▸</button></div>
+        <h3>${step.title}</h3>
+        <p>${step.text}</p>
+        <button class="primary" data-act="tut-next">${last ? 'Start fighting' : 'Next'}</button>
+      </div>`;
+    this.tutorialEl.querySelector('[data-act="tut-next"]')?.addEventListener('click', () => {
+      if (this.tutorialStep === null) return;
+      if (this.tutorialStep >= n - 1) this.markTutorialDone();
+      else this.tutorialStep += 1;
+      this.render();
+    });
+    this.tutorialEl.querySelector('[data-act="tut-skip"]')?.addEventListener('click', () => {
+      this.markTutorialDone();
+      this.render();
+    });
   }
 
   /** A modal (ship stats / combat help) layered over whatever the phase drew. */

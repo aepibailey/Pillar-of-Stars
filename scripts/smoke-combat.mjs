@@ -13,7 +13,12 @@ page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 await page.goto(`${BASE}/?seed=CSMOKE2&hostile=1`);
-await page.evaluate(() => localStorage.clear());
+await page.evaluate(() => {
+  localStorage.clear();
+  // This test exercises combat mechanics, not the first-combat tutorial —
+  // pre-dismiss the coach card so it doesn't intercept the Fire button.
+  localStorage.setItem('pillar-of-stars.tutorial.combat', 'done');
+});
 await page.reload();
 await page.waitForTimeout(400);
 
