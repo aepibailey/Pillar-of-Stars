@@ -152,3 +152,23 @@ Running dry is no longer instant death. When stranded (no affordable jump, no af
 ### Verification
 
 106 tests green — new suite covers the roll distribution (~15/15/70 over 3k seeded rolls), the full rigged-quiet 5-day sequence with Wake advances exactly on days 2 and 4 and `adrift` death after day 5, tow movement + requirement-gated purchases, robbery win/lose paths, determinism, and BFS station search on synthetic sectors.
+
+---
+
+## ✅ MILESTONE 1 COMPLETE — 2026-07-10
+
+M1 ("Skeleton — prove the loop", §14) is signed off by the designer. What shipped across sessions 1–5:
+
+- **The loop**: seeded galaxy generation (12–18 systems/sector, deterministic from one seed), jump map with fractional fuel, the Wake hunting the player's own trail, data-driven placeholder events, and a win at sector 3 (§14 definition of done met — playable on phone at 390×844).
+- **Framing-forward stubs (§14 exception)**: a 7-frame cinematic opening (§12.0) driven from `data/intro.json` — the homeworld's fall, the exodus, the Pillar, and the Ancients lore bridging into the opening ruin; "The Buried Door" run-opener (§9.3) that recovers the corrupted data-core; and rough-waypoint region navigation (§4) — the waypoint is a 4×4 grid cell to search, never a pin.
+- **Playtest-driven depth added in M1**: the Wake probe encounter, decoy ruins with excavation risk, Wake-space re-entry approaches (casual/fast/sneak), and the out-of-fuel "Wait 1 Day" stranding mechanic (tow / robbery / adrift-death).
+- **Architecture**: pure-reducer `RunState` (run identity ≠ captain, §6.4 guardrail held), auto-save at every decision point, all content in `/data`, seeded RNG everywhere, 106 unit tests covering generation determinism, fuel/Wake/waypoint math, event data contracts, and every probability distribution.
+- **Deployed**: live at https://aepibailey.github.io/Pillar-of-Stars/ via CI that gates on lint + tests.
+
+**Known M1 placeholders that M2+ must replace** (carried forward as integration debt):
+
+- The Wake-space contact fights (`wake-fight`, `wake-fight-fast`) and the stranded robbery (`stranded-robbery`) resolve as **placeholder events** (weighted fuel/scrap outcomes). Each fires at a single marked seam. M2's real ship-combat state machine replaces the two wake-space seams; the stranded robbery is a boarding scenario and likely waits for M3.
+- `ship.sensors` is a lone stub (level 0); M2 expands it into the full §5 subsystem model.
+- `hull` does not yet exist in `RunState`; M2 introduces it as the run's health bar (§5).
+
+**Standing design question still open from M1**: the gate-locked-until-ruin rule (each sector's jump gate stays locked until the signal ruin is found). Left as-is pending a play verdict.
