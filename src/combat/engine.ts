@@ -233,15 +233,17 @@ function fireVolley(
   attacker: CombatShip,
   defender: CombatShip,
   targets: (TargetId | null)[],
+  plan: FireStatus[],
   weaponDefs: readonly WeaponDef[],
   config: CombatConfig,
   rng: Rng,
   log: string[],
   attackerLabel: string,
 ): void {
-  const plan = planVolley(attacker, targets, weaponDefs);
-  // Every targeted weapon reports SOMETHING — a hit, a miss, or why it held
-  // fire. Untargeted weapons ('hold') are silent by design (you chose not to).
+  // The `plan` is decided BEFORE any volley executes this turn (simultaneous
+  // resolution) — so damage from the other side can't retroactively change
+  // which of these weapons fire. Every targeted weapon reports SOMETHING; an
+  // untargeted weapon ('hold') is silent by design (you chose not to fire it).
   attacker.weapons.forEach((slot, i) => {
     const def = weaponDef(weaponDefs, slot.defId);
     switch (plan[i]) {
@@ -406,34 +408,50 @@ export function combatReduce(
     return next;
   }
 
-  // Apply the player's chosen power allocation.
+  // Apply the player's chosen power allocation (their commit for the turn).
   next.player.power = clampPower(next.player, action.power);
   next.player.shieldLayers = Math.min(next.player.shieldLayers, maxShieldLayers(next.player));
 
-  if (action.type === 'FIRE') {
-    fireVolley(next.player, next.enemy, action.targets, weaponDefs, config, rng, log, 'You');
-    if (next.enemy.hull <= 0) {
-      next.outcome = 'won';
-      log.push(`The ${next.enemy.name} comes apart in the dark.`);
-      finish(next, rng, log);
-      return next;
-    }
-  } else {
-    // FLEE — charge the FTL drive with engine power instead of firing.
+  // SIMULTANEOUS RESOLUTION: both sides decide their turn independently, from
+  // the turn-START state, BEFORE either volley lands. The enemy AI never sees
+  // the player's choices, and neither volley's damage can cancel the other's
+  // firing this turn (so a killing blow doesn't retroactively stop the enemy's
+  // simultaneous shot). RNG order is fixed (player rolls, then enemy) purely
+  // for deterministic replay — it does not make one side "react" to the other.
+  const playerTargets: (TargetId | null)[] =
+    action.type === 'FIRE' ? action.targets : next.player.weapons.map(() => null);
+  const eTargets = enemyTargets(next, weaponDefs);
+  const playerPlan = planVolley(next.player, playerTargets, weaponDefs);
+  const enemyPlan = planVolley(next.enemy, eTargets, weaponDefs);
+
+  if (action.type === 'FLEE') {
     next.player.fleeCharge += next.player.power.engines;
     log.push(
       next.player.power.engines > 0
-        ? `Drive charging for the jump (${next.player.fleeCharge}/${next.fleeThreshold}).`
+        ? `You break for the dark — drive charging (${next.player.fleeCharge}/${next.fleeThreshold}).`
         : `No power to the engines — the drive can't charge.`,
     );
   }
 
-  // Enemy volley.
-  const eTargets = enemyTargets(next, weaponDefs);
-  fireVolley(next.enemy, next.player, eTargets, weaponDefs, config, rng, log, next.enemy.name);
+  // Execute both pre-decided volleys against the live ships.
+  fireVolley(next.player, next.enemy, playerTargets, playerPlan, weaponDefs, config, rng, log, 'You');
+  fireVolley(next.enemy, next.player, eTargets, enemyPlan, weaponDefs, config, rng, log, next.enemy.name);
+
+  // Evaluate outcomes AFTER both volleys. Player death takes precedence: mutual
+  // destruction is a loss (you can't sail on at zero hull). Flagged decision.
   if (next.player.hull <= 0) {
     next.outcome = 'lost';
-    log.push('Your hull fails. The dark rushes in.');
+    log.push(
+      next.enemy.hull <= 0
+        ? 'You trade killing blows — both ships come apart in the same breath. The dark takes you too.'
+        : 'Your hull fails. The dark rushes in.',
+    );
+    finish(next, rng, log);
+    return next;
+  }
+  if (next.enemy.hull <= 0) {
+    next.outcome = 'won';
+    log.push(`The ${next.enemy.name} comes apart in the dark.`);
     finish(next, rng, log);
     return next;
   }
@@ -442,7 +460,6 @@ export function combatReduce(
   upkeep(next.player, config);
   upkeep(next.enemy, config);
 
-  // Resolve a completed flee after the enemy had its shot.
   if (action.type === 'FLEE' && next.player.fleeCharge >= next.fleeThreshold) {
     next.outcome = 'fled';
     log.push('The drive catches — you tear a hole in space and are gone.');

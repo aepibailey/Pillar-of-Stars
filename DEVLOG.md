@@ -244,3 +244,34 @@ Gunship (evasion + targeting), Missile Boat (forces point-defense), Shield Fortr
 
 - Sensor upgrades should sharpen the threat read (and introduce UNKNOWN) — M3 sensor/intel work.
 - General (non-Wake) ship/faction name pool needs expansion — not blocking.
+
+---
+
+## Session 8 — 2026-07-11 · Combat turn model locked to SIMULTANEOUS + tutorial deferred
+
+### (a) What the turn model WAS before this prompt — SEQUENTIAL
+
+`combatReduce` resolved the player's volley first, then the enemy's, with two sequential tells:
+
+1. If the player's volley reduced the enemy hull to 0, the code short-circuited to `won` and **the enemy never fired back** that turn.
+2. The enemy's return volley was computed against the **already-damaged** enemy, so if the player disabled the enemy's weapons this turn, the enemy couldn't fire this turn.
+
+Both meant the enemy effectively _reacted_ to the player's action inside a single turn.
+
+### (b) What changed — refactored to SIMULTANEOUS (required, not optional)
+
+Intended design is simultaneous commit: the player inputs a full turn while the enemy AI decides independently, and both resolve together on "Fire". Refactor (contained to `src/combat/engine.ts`):
+
+- Both sides' firing plans are now decided from the **turn-start state** via `planVolley`, BEFORE either volley lands. Neither volley's damage can change the other's firing decisions (a killing blow no longer cancels the enemy's simultaneous shot; ion-disabling the enemy's weapons bites NEXT turn, not this one).
+- `fireVolley` takes a precomputed `plan` argument (was recomputing internally).
+- Win/lose is evaluated AFTER both volleys. **Mutual destruction = loss** (player-death precedence): you can't sail on at 0 hull, and letting "won" win a mutual-kill would strand a dead ship on the map. Flagged as my call, one-line to flip.
+- RNG order stays fixed (player rolls, then enemy) purely for deterministic replay — it does NOT make either side react to the other; the plans were already locked.
+- **Reveal stays plain** (the per-turn combat log shows both sides' lines together). No cinematic — that's M7.
+
+Locked in now so later combat features build on the correct resolution model. 3 new tests assert: enemy fires on the player's killing turn; disabling enemy weapons doesn't stop its shot that turn; mutual destruction → loss. 150 tests green, build/lint clean. No save-schema change.
+
+### (c) Deferred — scripted first-combat TUTORIAL (planned END-OF-M2 task, NOT started)
+
+Per the designer: the player's very first fight should be a guided encounter that explains each combat element (subsystem power allocation, weapon types, power-cost/ammo readouts, the insufficient-power warning) inline as it comes up, instead of relying on the `? Explain` button.
+
+**Do NOT build until the closing task of M2**, after the current round of combat UI bugs/fixes has stabilized (silent weapon fire ✓, power-allocation cap ✓, combat-log reporting ✓, simultaneous turn model ✓ — all now done), so the tutorial script isn't written against a moving UI. Requires explicit designer sign-off before starting. Reference: this prompt (Session 8, item 2). Logged so it isn't forgotten.

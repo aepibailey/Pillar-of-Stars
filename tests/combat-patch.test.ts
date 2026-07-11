@@ -92,6 +92,59 @@ describe('item 4/5 — no weapon fires silently', () => {
   });
 });
 
+const ION = 3;
+
+describe('turn resolution is SIMULTANEOUS (locked-in architecture)', () => {
+  it('the enemy still fires on the turn the player lands the killing blow', () => {
+    const s = fight('gunship');
+    s.enemy.hull = 1;
+    s.enemy.shieldLayers = 0;
+    s.player.shieldLayers = 0;
+    const after = combatReduce(
+      s,
+      { type: 'FIRE', power: { engines: 0, weapons: 1, shields: 0 }, targets: targets({ [KIN]: 'hull' }) },
+      weaponDefs,
+      combatConfig,
+    );
+    expect(after.outcome).toBe('won');
+    // Sequential would have skipped the enemy volley; simultaneous does not.
+    expect(after.player.hull).toBeLessThan(after.player.hullMax);
+  });
+
+  it('disabling the enemy weapons THIS turn does not stop its shot THIS turn', () => {
+    const s = fight('gunship');
+    s.enemy.shieldLayers = 0;
+    s.player.shieldLayers = 0;
+    const after = combatReduce(
+      s,
+      { type: 'FIRE', power: { engines: 0, weapons: 1, shields: 0 }, targets: targets({ [ION]: 'weapons' }) },
+      weaponDefs,
+      combatConfig,
+    );
+    // Ion landed (weapons now damaged → bites NEXT turn)...
+    expect(after.enemy.subsystems.weapons.damage).toBeGreaterThan(0);
+    // ...but the enemy still got its simultaneous volley in this turn.
+    expect(after.player.hull).toBeLessThan(after.player.hullMax);
+  });
+
+  it('mutual destruction resolves as a loss (player death takes precedence)', () => {
+    const s = fight('gunship');
+    s.enemy.hull = 1;
+    s.player.hull = 1;
+    s.enemy.shieldLayers = 0;
+    s.player.shieldLayers = 0;
+    const after = combatReduce(
+      s,
+      { type: 'FIRE', power: { engines: 0, weapons: 1, shields: 0 }, targets: targets({ [KIN]: 'hull' }) },
+      weaponDefs,
+      combatConfig,
+    );
+    expect(after.enemy.hull).toBeLessThanOrEqual(0);
+    expect(after.player.hull).toBeLessThanOrEqual(0);
+    expect(after.outcome).toBe('lost');
+  });
+});
+
 describe('item 6 — the power cap is the subsystem level (kept, now surfaced)', () => {
   it('the weapons channel still caps at the weapons subsystem level', () => {
     const s = fight('gunship');
