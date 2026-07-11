@@ -170,76 +170,38 @@
     ]
   },
   {
-    "id": "wake-fight-picket",
-    "title": "Contact in the Ashes",
-    "text": "Wake-held space is not empty space. A picket cutter unfolds from the shadow of a cracked moon, running lights the color of embers, and its targeting array reaches for your hull like a hand. They know what you are. The channel fills with a single repeated word in their liturgical cant: HALT.",
-    "trigger": { "fixed": "wake-fight" },
+    "id": "hostile-ship-ambush",
+    "title": "Hard Contact",
+    "text": "It was waiting in the sensor shadow of the nearest body — a hull scarred by more fights than yours, weapons already run out and hot. No hail. No demand. Just a firing solution, tightening. Whatever they want, they mean to take it off your wreck.",
+    "trigger": { "fixed": "hostile-ship" },
     "options": [
       {
-        "label": "Stand and fight",
+        "label": "Bring the guns online — fight",
         "outcomes": [
           {
             "weight": 1,
-            "text": "You put your guns into their sensor mast first and their nerve second. The cutter breaks off, venting atmosphere, and you strip a drive cell from the debris it sheds. It cost you plating you'll miss.",
-            "effects": { "scrap": -1, "fuel": 1 }
-          },
-          {
-            "weight": 1,
-            "text": "It's a mauling, not a duel. You win it — barely — limping clear of the tumbling wreck with your hull groaning and half a cargo rack shot away.",
-            "effects": { "scrap": -3 }
+            "text": "No more talking, then. You route power to the weapons and roll to bring them to bear.",
+            "effects": { "launchCombat": "random" }
           }
         ]
       },
       {
-        "label": "Break and run",
+        "label": "Try to slip away before they close",
         "outcomes": [
           {
             "weight": 2,
-            "text": "You firewall the throttle and run for the dark, burning reserves like a bonfire. Their pursuit breaks off at the edge of the dead zone — this space is already theirs; they don't need to chase hard.",
-            "effects": { "fuel": -2 }
-          },
-          {
-            "weight": 1,
-            "text": "You escape, but not clean — a parting shot chews through your aft plating as you claw away, and the drive drinks deep the whole way out.",
-            "effects": { "fuel": -2, "scrap": -2 }
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": "wake-fight-picket-fast",
-    "title": "Contact in the Ashes",
-    "text": "Wake-held space is not empty space. A picket cutter unfolds from the shadow of a cracked moon, targeting array reaching for your hull — but your drive is already screaming hot, exactly as you planned. They know what you are. You know how fast you are.",
-    "trigger": { "fixed": "wake-fight-fast" },
-    "options": [
-      {
-        "label": "Stand and fight",
-        "outcomes": [
-          {
-            "weight": 1,
-            "text": "You put your guns into their sensor mast first and their nerve second. The cutter breaks off, venting atmosphere, and you strip a drive cell from the debris it sheds. It cost you plating you'll miss.",
-            "effects": { "scrap": -1, "fuel": 1 }
-          },
-          {
-            "weight": 1,
-            "text": "It's a mauling, not a duel. You win it — barely — limping clear of the tumbling wreck with your hull groaning and half a cargo rack shot away.",
-            "effects": { "scrap": -3 }
-          }
-        ]
-      },
-      {
-        "label": "Break and run",
-        "outcomes": [
-          {
-            "weight": 3,
-            "text": "This is why you came in hot. The cutter's firing solution chases empty space — you're already past it and gone, a rumor in their sensor logs.",
+            "text": "You kill your drive signature and drift into the debris field, and their targeting array sweeps past. By the time they realize, you're a cold rock among cold rocks. Gone.",
             "effects": {}
           },
           {
             "weight": 1,
-            "text": "One glancing hit scores your dorsal plating as you blow through their picket line — but the drive was hot, the vector was yours, and the dark takes you back cheap.",
-            "effects": { "fuel": -1 }
+            "text": "You burn hard for open sky and make it — but not before they walk a volley across your stern. The drive drinks deep covering the distance.",
+            "effects": { "fuel": -2 }
+          },
+          {
+            "weight": 2,
+            "text": "Too slow. They cut your angle and close to knife range before your drive can spin up — there's no running now.",
+            "effects": { "launchCombat": "random" }
           }
         ]
       }

@@ -1,3 +1,4 @@
+import { weapons, enemies, playerDef, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -10,11 +11,11 @@ import type { Sector } from '../src/galaxy/types';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config };
+const deps: Deps = { events, config, weapons, enemies, playerDef };
 
 /** A run stranded at its entry system: fuel 0, everything here surveyed. */
 function strandedState(seed = 'stranding-seed'): RunState {
-  let s = createRun(seed, config);
+  let s = createRun(seed, config, newShip());
   s = reduce(s, { type: 'FINISH_INTRO' }, deps);
   s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
   s = reduce(s, { type: 'ACK_OUTCOME' }, deps);
@@ -41,12 +42,12 @@ function riggedDeps(tow: number, robbery: number): Deps {
   const rigged = structuredClone(config);
   rigged.stranding.towChance = tow;
   rigged.stranding.robberyChance = robbery;
-  return { events, config: rigged };
+  return { ...deps, config: rigged };
 }
 
 describe('stranding preconditions', () => {
   it('WAIT_DAY is rejected when not stranded', () => {
-    let s = createRun('not-stranded-seed', config);
+    let s = createRun('not-stranded-seed', config, newShip());
     s = reduce(s, { type: 'FINISH_INTRO' }, deps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, deps);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { weapons, enemies, playerDef, newShip } from './fixtures';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
 import { createRun, reduce, type Deps } from '../src/engine/reducer';
@@ -78,10 +79,17 @@ describe('wakeAdvance effect integration', () => {
   };
   const opener = events.find((e) => e.trigger.fixed === 'run-opener') as EventDef;
   const ruin = events.find((e) => e.trigger.fixed === 'sector-ruin') as EventDef;
-  const riggedDeps: Deps = { events: [opener, ruin, riggedEvent], config };
+  // No hostile-ship event in this trimmed pool, so silence hostile rolls.
+  const riggedDeps: Deps = {
+    events: [opener, ruin, riggedEvent],
+    config: { ...config, hostileEncounterChance: 0 },
+    weapons,
+    enemies,
+    playerDef,
+  };
 
   function toMapRigged(): RunState {
-    let s = createRun('probe-int-seed', config);
+    let s = createRun('probe-int-seed', config, newShip());
     s = reduce(s, { type: 'FINISH_INTRO' }, riggedDeps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, riggedDeps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, riggedDeps);

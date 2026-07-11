@@ -155,7 +155,11 @@ export class App {
           ['casual', 'fast', 'sneak'] as const
         ).map((id) => {
           const cost = config.wakeSpace[id].fuelCost;
-          const pct = Math.round(wakeFightChance(config, id, state.ship.sensors) * 100);
+          const sensorBonus =
+            state.ship.subsystems.sensors.level -
+            state.ship.subsystems.sensors.damage -
+            this.store.getDeps().playerDef.subsystems.sensors;
+          const pct = Math.round(wakeFightChance(config, id, sensorBonus) * 100);
           const labels: Record<WakeApproach, [string, string]> = {
             casual: ['Fly in casually', `${fmt(cost)} fuel · ${pct}% chance of contact`],
             fast: [
@@ -337,6 +341,8 @@ export class App {
         'Five days. You rationed the water, banked the reactor, watched the sky. Nobody came — nobody friendly, anyway. The ship becomes one more cold hulk drifting between stars, waiting for a salvage crew that will wonder, briefly, who you were.',
       robbed:
         'They wanted the ship more than you could afford to keep it. The boarding party works methodically through the corridors, and the last light aboard is the glow of their cutting torches.',
+      destroyed:
+        'The hull comes apart around you in the cold and the quiet. Somewhere, a debris field spreads where a ship used to be — and the map you carried scatters with it.',
     }[state.deathCause ?? 'adrift'];
     const title = won ? 'SECTOR 3 — THE ROAD GOES ON' : 'THE JOURNEY ENDS';
     const body = won

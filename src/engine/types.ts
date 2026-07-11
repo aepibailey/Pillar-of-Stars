@@ -8,17 +8,18 @@
  * galaxy state. Nothing in this schema may assume captain === run.
  */
 
-export type Phase = 'intro' | 'map' | 'event' | 'dead' | 'won';
+import type { CombatConfig, CombatShip, CombatState, SubsystemId } from '../combat/types';
+
+export type Phase = 'intro' | 'map' | 'event' | 'combat' | 'dead' | 'won';
 
 /**
- * 'wake'   — the front caught the player.
- * 'adrift' — stranded and waited out all rescue days; ship and crew are lost
- *            with nothing left to succeed from, so §6.4 succession never applies.
- * 'robbed' — killed by scavengers while stranded.
- * (Plain fuel exhaustion is no longer instant death — the stranding/wait
- * mechanic replaced it.)
+ * 'wake'      — the front caught the player.
+ * 'adrift'    — stranded and waited out all rescue days.
+ * 'robbed'    — killed by scavengers while stranded.
+ * 'destroyed' — hull reached zero in ship combat (M2).
+ * ('adrift'/'destroyed' lose the ship entirely, so §6.4 succession can't apply.)
  */
-export type DeathCause = 'wake' | 'adrift' | 'robbed';
+export type DeathCause = 'wake' | 'adrift' | 'robbed' | 'destroyed';
 
 export interface Character {
   id: string;
@@ -30,13 +31,12 @@ export interface Character {
 export type WakeApproach = 'casual' | 'fast' | 'sneak';
 
 /**
- * Minimal ship state stub. The real subsystem model is M2 — this exists so
- * formulas that will read subsystem levels (e.g. sneak's sensor reduction)
- * already have their hook and won't need rewriting.
+ * The player's persistent ship (M2, §5). It IS a CombatShip — combat clones it
+ * and resets the transient fields (power/shields/flee), then writes hull,
+ * subsystem damage, and weapon ammo back when the fight ends. Storing one shape
+ * avoids a translation layer between "run ship" and "combat ship".
  */
-export interface ShipState {
-  sensors: number;
-}
+export type ShipState = CombatShip;
 
 export interface ActiveEvent {
   defId: string;
@@ -44,6 +44,8 @@ export interface ActiveEvent {
   /** Node that triggered it, or null for auto-fired events (the run opener). */
   nodeId: string | null;
   outcomeText?: string;
+  /** Archetype id (or 'random') to launch combat with when the outcome is acked. */
+  pendingCombat?: string;
 }
 
 export interface WakeState {
@@ -62,6 +64,8 @@ export interface WakeState {
 export interface RunStats {
   jumps: number;
   eventsResolved: number;
+  /** Ship fights entered — also the deterministic encounter id for combat seeding. */
+  combats: number;
 }
 
 export interface RunState {
@@ -94,6 +98,8 @@ export interface RunState {
 
   wake: WakeState;
   activeEvent: ActiveEvent | null;
+  /** Active ship fight, or null. Its own RNG cursor rides inside it (§7.1). */
+  combat: CombatState | null;
   /** Days waited in the CURRENT stranding (resets when the stranding ends). */
   strandedDays: number;
   stats: RunStats;
@@ -146,4 +152,14 @@ export interface GameConfig {
     extraRuinsMin: number;
     extraRuinsMax: number;
   };
+  combat: CombatConfig;
+  /** Scrap-for-repair rates (§5 "repairs cost scrap"). */
+  repair: {
+    hullPerScrap: number;
+    subsystemDamagePerScrap: number;
+  };
+  /** Per-exploration chance of a hostile-ship encounter that launches combat. */
+  hostileEncounterChance: number;
 }
+
+export type { SubsystemId };

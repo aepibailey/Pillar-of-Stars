@@ -1,3 +1,4 @@
+import { weapons, enemies, playerDef, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -10,11 +11,11 @@ import {
 } from '../src/engine/reducer';
 import { deriveSeed } from '../src/engine/rng';
 import type { GameConfig, RunState, WakeApproach } from '../src/engine/types';
-import type { EventDef, EventOption } from '../src/events/types';
+import type { EventDef } from '../src/events/types';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config };
+const deps: Deps = { events, config, weapons, enemies, playerDef };
 
 describe('wake-space approach math (patch §6)', () => {
   it('base fight chances match the spec', () => {
@@ -35,7 +36,7 @@ describe('wake-space approach math (patch §6)', () => {
 
 describe('wake-space entry integration', () => {
   function baseState(): { s: RunState; targetId: string } {
-    let s = createRun('wakespace-seed', config);
+    let s = createRun('wakespace-seed', config, newShip());
     s = reduce(s, { type: 'FINISH_INTRO' }, deps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, deps);
@@ -59,23 +60,36 @@ describe('wake-space entry integration', () => {
     let casualFights = 0;
     let sneakFights = 0;
     for (let i = 0; i < N; i++) {
-      if (jumpWithRngSeed('casual', i).phase === 'event') casualFights++;
-      if (jumpWithRngSeed('sneak', i).phase === 'event') sneakFights++;
+      // Contact now launches real ship combat (M2), not a placeholder event.
+      if (jumpWithRngSeed('casual', i).phase === 'combat') casualFights++;
+      if (jumpWithRngSeed('sneak', i).phase === 'combat') sneakFights++;
     }
     expect(casualFights / N).toBeCloseTo(0.7, 1);
     expect(sneakFights / N).toBeCloseTo(0.3, 1);
   });
 
-  it('a triggered fight fires the placeholder event matching the approach', () => {
+  it('a triggered fight launches combat; the fast approach grants a flee head start', () => {
     for (let i = 0; i < 200; i++) {
       const after = jumpWithRngSeed('fast', i);
-      if (after.phase === 'event') {
-        const def = events.find((e) => e.id === after.activeEvent?.defId);
-        expect(def?.trigger.fixed).toBe('wake-fight-fast');
+      if (after.phase === 'combat') {
+        expect(after.combat).not.toBeNull();
+        expect(after.combat?.origin).toBe('wake-space');
+        expect(after.combat?.player.fleeCharge).toBe(config.combat.fastApproachFleeHeadstart);
         return;
       }
     }
     throw new Error('no fight triggered in 200 fast entries — statistically impossible');
+  });
+
+  it('a casual-approach fight starts with no flee head start', () => {
+    for (let i = 0; i < 200; i++) {
+      const after = jumpWithRngSeed('casual', i);
+      if (after.phase === 'combat') {
+        expect(after.combat?.player.fleeCharge).toBe(0);
+        return;
+      }
+    }
+    throw new Error('no fight triggered in 200 casual entries — statistically impossible');
   });
 
   it('charges the approach fuel cost on entry', () => {
@@ -88,28 +102,5 @@ describe('wake-space entry integration', () => {
     const a = jumpWithRngSeed('casual', 7);
     const b = jumpWithRngSeed('casual', 7);
     expect(a).toEqual(b);
-  });
-});
-
-describe('fight event data contracts', () => {
-  const normal = events.find((e) => e.trigger.fixed === 'wake-fight') as EventDef;
-  const fast = events.find((e) => e.trigger.fixed === 'wake-fight-fast') as EventDef;
-
-  function expectedLoss(option: EventOption): number {
-    const total = option.outcomes.reduce((sum, o) => sum + o.weight, 0);
-    return option.outcomes.reduce((sum, o) => {
-      const loss = -(o.effects?.fuel ?? 0) - (o.effects?.scrap ?? 0);
-      return sum + (o.weight / total) * loss;
-    }, 0);
-  }
-
-  it('both fight events exist with fight and flee options', () => {
-    expect(normal.options.length).toBeGreaterThanOrEqual(2);
-    expect(fast.options.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("the fast approach's flee option carries reduced consequences", () => {
-    // Option order contract: [0] stand and fight, [1] break and run.
-    expect(expectedLoss(fast.options[1])).toBeLessThan(expectedLoss(normal.options[1]));
   });
 });

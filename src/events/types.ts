@@ -11,11 +11,8 @@ import type { NodeType } from '../galaxy/types';
  *                        'mapRecovered' flag or the run cannot progress.
  *  - 'sector-ruin'     — fires when the player explores the sector's SIGNAL
  *                        ruin. Every outcome MUST include decodeSector: true.
- *  - 'wake-fight'      — M1 placeholder for contact when entering Wake-held
- *                        space (patch §6). Swapped for the real ship-combat
- *                        state machine in M2.
- *  - 'wake-fight-fast' — same, for the 'move fast' approach: its flee option
- *                        carries reduced consequences.
+ *  - 'hostile-ship'    — a node encounter whose "engage" outcome launches a
+ *                        real ship fight (§7.1) via effects.launchCombat.
  */
 
 export interface EventEffects {
@@ -29,6 +26,8 @@ export interface EventEffects {
   wakeAdvance?: number;
   /** This outcome ends the run (applied on outcome acknowledgement). */
   death?: DeathCause;
+  /** Launch ship combat when this outcome is acknowledged (archetype id or 'random'). */
+  launchCombat?: string;
 }
 
 /**
@@ -54,8 +53,7 @@ export interface EventOption {
 export type FixedTrigger =
   | 'run-opener'
   | 'sector-ruin'
-  | 'wake-fight'
-  | 'wake-fight-fast'
+  | 'hostile-ship'
   | 'stranded-tow'
   | 'stranded-robbery'
   | 'stranded-quiet';

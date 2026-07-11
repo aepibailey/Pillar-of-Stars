@@ -6,6 +6,15 @@
  * possible (§13).
  */
 
+import { combatReduce, effLevel, makeCombatShip, startCombat } from '../combat/engine';
+import type {
+  CombatAction,
+  CombatOrigin,
+  EnemyArchetype,
+  PlayerShipDef,
+  SubsystemId,
+  WeaponDef,
+} from '../combat/types';
 import { findFixedEvent, getEvent, pickNodeEvent, pickOutcome } from '../events/engine';
 import type { EventDef, EventEffects } from '../events/types';
 import { getSector } from '../galaxy/generate';
@@ -13,10 +22,10 @@ import { nearestStationSystemId } from '../galaxy/search';
 import type { Sector } from '../galaxy/types';
 import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
-import type { Character, GameConfig, RunState, WakeApproach } from './types';
+import type { Character, GameConfig, RunState, ShipState, WakeApproach } from './types';
 
-// v3: strandedDays + the Wait-1-Day mechanic (was v2: fractional fuel/Wake).
-export const SCHEMA_VERSION = 3;
+// v4: ship subsystem model + combat (was v3: strandedDays / Wait-1-Day).
+export const SCHEMA_VERSION = 4;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -26,14 +35,35 @@ export type Action =
   | { type: 'RESOLVE_OPTION'; optionIndex: number }
   | { type: 'ACK_OUTCOME' }
   | { type: 'ENTER_GATE' }
-  | { type: 'WAIT_DAY' };
+  | { type: 'WAIT_DAY' }
+  | { type: 'COMBAT_ACTION'; combatAction: CombatAction }
+  | { type: 'COMBAT_ACK' }
+  | { type: 'REPAIR'; target: 'hull' | SubsystemId };
 
 export interface Deps {
   events: readonly EventDef[];
   config: GameConfig;
+  weapons: readonly WeaponDef[];
+  enemies: readonly EnemyArchetype[];
+  playerDef: PlayerShipDef;
 }
 
-export function createRun(seed: string, config: GameConfig): RunState {
+/** Build a fresh player ship (§5) from the data-driven class definition. */
+export function buildPlayerShip(
+  playerDef: PlayerShipDef,
+  weapons: readonly WeaponDef[],
+): ShipState {
+  return makeCombatShip(
+    playerDef.name,
+    playerDef.hullMax,
+    playerDef.subsystems,
+    playerDef.pdChance,
+    playerDef.weapons,
+    weapons,
+  );
+}
+
+export function createRun(seed: string, config: GameConfig, ship: ShipState): RunState {
   const sector = getSector(seed, 0, config);
   const captain: Character = { id: 'char-0', name: 'The Survivor', role: 'captain' };
   return {
@@ -43,7 +73,7 @@ export function createRun(seed: string, config: GameConfig): RunState {
     phase: 'intro',
     characters: [captain],
     captainId: captain.id,
-    ship: { sensors: 0 },
+    ship,
     sectorIndex: 0,
     currentSystemId: sector.entrySystemId,
     visitOrder: [sector.entrySystemId],
@@ -54,8 +84,9 @@ export function createRun(seed: string, config: GameConfig): RunState {
     scrap: config.startScrap,
     wake: createWakeState(config.wakeGraceJumps),
     activeEvent: null,
+    combat: null,
     strandedDays: 0,
-    stats: { jumps: 0, eventsResolved: 0 },
+    stats: { jumps: 0, eventsResolved: 0, combats: 0 },
     rngState: { events: deriveSeed(seed, 'events') },
   };
 }
@@ -176,11 +207,85 @@ function fireEvent(state: RunState, def: EventDef, nodeId: string | null): void 
   state.phase = 'event';
 }
 
+/**
+ * Wake-space sneak reads the ship's sensor UPGRADE above its starting level, so
+ * a fresh ship gets no bonus (preserving M1 balance) while later sensor
+ * upgrades tighten the sneak — and damaged sensors make it worse.
+ */
+function sensorBonus(state: RunState, deps: Deps): number {
+  return effLevel(state.ship.subsystems.sensors) - deps.playerDef.subsystems.sensors;
+}
+
+/** Start a ship fight (§7.1). Enemy is chosen deterministically off the event RNG. */
+function launchCombat(
+  state: RunState,
+  deps: Deps,
+  archetypeId: string,
+  origin: CombatOrigin,
+  fleeHeadstart: number,
+): void {
+  const { config, weapons, enemies, playerDef } = deps;
+  let archetype: EnemyArchetype;
+  if (archetypeId === 'random') {
+    const rng = new Rng(state.rngState.events);
+    archetype = rng.pick(enemies);
+    state.rngState.events = rng.getState();
+  } else {
+    archetype = enemies.find((e) => e.id === archetypeId) ?? enemies[0];
+  }
+  const encounterId = String(state.stats.combats);
+  state.stats.combats++;
+  state.combat = startCombat({
+    seed: state.seed,
+    encounterId,
+    playerDef,
+    playerShip: state.ship,
+    archetype,
+    weaponDefs: weapons,
+    config: config.combat,
+    origin,
+    fleeHeadstart,
+  });
+  state.phase = 'combat';
+}
+
+/** Apply a resolved fight back to the run: writeback ship, salvage, or death. */
+function applyCombatResult(state: RunState, config: GameConfig): void {
+  const c = state.combat;
+  if (!c || c.outcome === 'ongoing') return;
+
+  if (c.outcome === 'lost') {
+    state.combat = null;
+    state.phase = 'dead';
+    state.deathCause = 'destroyed';
+    return;
+  }
+
+  // Persist hull, subsystem damage, and spent ammo; reset combat-transient fields.
+  state.ship = {
+    ...c.player,
+    power: { engines: 0, weapons: 0, shields: 0 },
+    shieldLayers: 0,
+    fleeCharge: 0,
+  };
+  if (c.outcome === 'won') {
+    state.scrap += c.salvageScrap;
+    state.fuel += c.salvageFuel;
+  } else if (c.outcome === 'surrendered') {
+    state.scrap = Math.max(0, state.scrap - c.surrenderScrapCost);
+  } else if (c.outcome === 'bribed') {
+    state.scrap = Math.max(0, state.scrap - c.bribeCost);
+  }
+  state.combat = null;
+  state.phase = 'map';
+  checkStranded(state, config);
+}
+
 export function reduce(state: RunState, action: Action, deps: Deps): RunState {
-  const { events, config } = deps;
+  const { events, config, weapons } = deps;
 
   if (action.type === 'NEW_RUN') {
-    return createRun(action.seed, config);
+    return createRun(action.seed, config, buildPlayerShip(deps.playerDef, weapons));
   }
 
   const next: RunState = structuredClone(state);
@@ -222,18 +327,20 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       }
 
       if (intoWakeSpace) {
-        const chance = wakeFightChance(config, approach, next.ship.sensors);
+        const chance = wakeFightChance(config, approach, sensorBonus(next, deps));
         const rng = new Rng(next.rngState.events);
         const contact = rng.next() < chance;
         next.rngState.events = rng.getState();
         if (contact) {
-          // M2 SWAP POINT: this is the single site where a triggered fight
-          // resolves. Today it fires a placeholder event; M2 replaces this
-          // call with entry into the ship-combat state machine.
-          fireEvent(
+          // Wake-held space is patrolled: contact launches a real ship fight
+          // (§7.1). The 'fast' approach's promised easier escape becomes a
+          // flee-charge head start.
+          launchCombat(
             next,
-            findFixedEvent(events, approach === 'fast' ? 'wake-fight-fast' : 'wake-fight'),
-            null,
+            deps,
+            'random',
+            'wake-space',
+            approach === 'fast' ? config.combat.fastApproachFleeHeadstart : 0,
           );
           return next;
         }
@@ -274,6 +381,12 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       }
 
       const rng = new Rng(next.rngState.events);
+      // A hostile ship may be lying in wait (§7.1 encounter source).
+      if (rng.next() < config.hostileEncounterChance) {
+        next.rngState.events = rng.getState();
+        fireEvent(next, findFixedEvent(events, 'hostile-ship'), node.id);
+        return next;
+      }
       const def = pickNodeEvent(events, node.type, rng);
       next.rngState.events = rng.getState();
       if (!def) {
@@ -301,7 +414,12 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       next.rngState.events = rng.getState();
 
       applyEffects(next, outcome.effects);
-      next.activeEvent = { ...next.activeEvent, stage: 'outcome', outcomeText: outcome.text };
+      next.activeEvent = {
+        ...next.activeEvent,
+        stage: 'outcome',
+        outcomeText: outcome.text,
+        pendingCombat: outcome.effects?.launchCombat,
+      };
       next.stats.eventsResolved++;
       return next;
     }
@@ -310,10 +428,16 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       if (next.phase !== 'event' || !next.activeEvent || next.activeEvent.stage !== 'outcome') {
         return state;
       }
+      const pendingCombat = next.activeEvent.pendingCombat;
       next.activeEvent = null;
       if (next.deathCause) {
         // An effect (e.g. wakeAdvance) already sealed this run's fate.
         next.phase = 'dead';
+        return next;
+      }
+      if (pendingCombat) {
+        // The event resolved into a fight (e.g. the hostile-ship encounter).
+        launchCombat(next, deps, pendingCombat, 'hostile-event', 0);
         return next;
       }
       next.phase = 'map';
@@ -390,6 +514,41 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         return next;
       }
       fireEvent(next, findFixedEvent(events, 'stranded-quiet'), null);
+      return next;
+    }
+
+    case 'COMBAT_ACTION': {
+      if (next.phase !== 'combat' || !next.combat || next.combat.outcome !== 'ongoing') {
+        return state;
+      }
+      // Bribe must be affordable before it's offered to the enemy.
+      if (action.combatAction.type === 'BRIBE' && next.scrap < next.combat.bribeCost) return state;
+      next.combat = combatReduce(next.combat, action.combatAction, weapons, config.combat);
+      return next;
+    }
+
+    case 'COMBAT_ACK': {
+      if (next.phase !== 'combat' || !next.combat || next.combat.outcome === 'ongoing') {
+        return state;
+      }
+      applyCombatResult(next, config);
+      return next;
+    }
+
+    case 'REPAIR': {
+      // Spend scrap to undo combat damage (§5 "repairs cost scrap").
+      if (next.phase !== 'map' || next.scrap <= 0) return state;
+      const r = config.repair;
+      if (action.target === 'hull') {
+        if (next.ship.hull >= next.ship.hullMax) return state;
+        next.scrap -= 1;
+        next.ship.hull = Math.min(next.ship.hullMax, next.ship.hull + r.hullPerScrap);
+      } else {
+        const sub = next.ship.subsystems[action.target];
+        if (sub.damage <= 0) return state;
+        next.scrap -= 1;
+        sub.damage = Math.max(0, sub.damage - r.subsystemDamagePerScrap);
+      }
       return next;
     }
   }
