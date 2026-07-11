@@ -1,0 +1,17 @@
+{
+  "id": "survivor",
+  "name": "Battered Survey Ship",
+  "hullMax": 30,
+  "subsystems": {
+    "reactor": 4,
+    "engines": 2,
+    "weapons": 3,
+    "shields": 2,
+    "sensors": 2,
+    "lifeSupport": 1,
+    "medbay": 1,
+    "comms": 1
+  },
+  "pdChance": 0.4,
+  "weapons": ["kinetic-autocannon", "laser-beam", "missile-rack", "ion-blaster"]
+}

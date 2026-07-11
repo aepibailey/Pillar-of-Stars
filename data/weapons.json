@@ -1,0 +1,64 @@
+[
+  {
+    "id": "kinetic-autocannon",
+    "name": "Autocannon",
+    "type": "kinetic",
+    "damage": 3,
+    "powerCost": 1,
+    "ammo": 8,
+    "cooldown": 0
+  },
+  {
+    "id": "laser-beam",
+    "name": "Beam Laser",
+    "type": "laser",
+    "damage": 2,
+    "powerCost": 2,
+    "shieldStrip": 2,
+    "cooldown": 0
+  },
+  {
+    "id": "missile-rack",
+    "name": "Missile Rack",
+    "type": "missile",
+    "damage": 5,
+    "powerCost": 1,
+    "ammo": 4,
+    "cooldown": 1
+  },
+  {
+    "id": "ion-blaster",
+    "name": "Ion Blaster",
+    "type": "ion",
+    "damage": 2,
+    "powerCost": 1,
+    "cooldown": 0
+  },
+  {
+    "id": "enemy-slugthrower",
+    "name": "Slugthrower",
+    "type": "kinetic",
+    "damage": 2,
+    "powerCost": 1,
+    "ammo": 99,
+    "cooldown": 0
+  },
+  {
+    "id": "enemy-missile",
+    "name": "Warhead Launcher",
+    "type": "missile",
+    "damage": 4,
+    "powerCost": 1,
+    "ammo": 99,
+    "cooldown": 1
+  },
+  {
+    "id": "enemy-heavy-laser",
+    "name": "Siege Laser",
+    "type": "laser",
+    "damage": 3,
+    "powerCost": 2,
+    "shieldStrip": 2,
+    "cooldown": 1
+  }
+]

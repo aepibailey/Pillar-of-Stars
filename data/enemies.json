@@ -1,0 +1,68 @@
+[
+  {
+    "id": "gunship",
+    "name": "Void Jackal Skirmisher",
+    "hullMax": 14,
+    "subsystems": {
+      "reactor": 3,
+      "engines": 3,
+      "weapons": 2,
+      "shields": 1,
+      "sensors": 1,
+      "lifeSupport": 1,
+      "medbay": 0,
+      "comms": 1
+    },
+    "pdChance": 0.2,
+    "weapons": ["enemy-slugthrower", "enemy-slugthrower"],
+    "doctrine": "aggressive",
+    "salvageScrap": 4,
+    "salvageFuel": 1,
+    "acceptsSurrender": true,
+    "acceptsBribe": true
+  },
+  {
+    "id": "missile-boat",
+    "name": "Ashfall Missile Boat",
+    "hullMax": 12,
+    "subsystems": {
+      "reactor": 3,
+      "engines": 1,
+      "weapons": 3,
+      "shields": 1,
+      "sensors": 1,
+      "lifeSupport": 1,
+      "medbay": 0,
+      "comms": 1
+    },
+    "pdChance": 0.5,
+    "weapons": ["enemy-missile", "enemy-missile"],
+    "doctrine": "bombard",
+    "salvageScrap": 5,
+    "salvageFuel": 2,
+    "acceptsSurrender": true,
+    "acceptsBribe": true
+  },
+  {
+    "id": "shield-fortress",
+    "name": "Ashen Choir Bastion",
+    "hullMax": 22,
+    "subsystems": {
+      "reactor": 4,
+      "engines": 1,
+      "weapons": 2,
+      "shields": 4,
+      "sensors": 2,
+      "lifeSupport": 1,
+      "medbay": 0,
+      "comms": 1
+    },
+    "pdChance": 0.3,
+    "weapons": ["enemy-slugthrower", "enemy-heavy-laser"],
+    "doctrine": "grind",
+    "salvageScrap": 7,
+    "salvageFuel": 2,
+    "acceptsSurrender": false,
+    "acceptsBribe": true
+  }
+]

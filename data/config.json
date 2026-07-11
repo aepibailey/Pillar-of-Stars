@@ -26,5 +26,21 @@
     "gridRows": 4,
     "extraRuinsMin": 1,
     "extraRuinsMax": 2
-  }
+  },
+  "combat": {
+    "evasionPerEnginePower": 0.12,
+    "maxEvasion": 0.6,
+    "shieldRegenPerTurn": 1,
+    "ionRegenPerTurn": 1,
+    "fleeThreshold": 6,
+    "fastApproachFleeHeadstart": 3,
+    "subsystemHullFactor": 0.5,
+    "bribeCost": 5,
+    "surrenderScrapCost": 4
+  },
+  "repair": {
+    "hullPerScrap": 2,
+    "subsystemDamagePerScrap": 1
+  },
+  "hostileEncounterChance": 0.16
 }
