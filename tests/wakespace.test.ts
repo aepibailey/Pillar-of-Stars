@@ -104,3 +104,50 @@ describe('wake-space entry integration', () => {
     expect(a).toEqual(b);
   });
 });
+
+describe('entering a system as the Wake consumes it (§4 — never silent death)', () => {
+  /** Get to system B via A, with a spare-fuel state ready to backtrack to A. */
+  function atNeighbour(): { atB: RunState; A: string; B: string } {
+    let s = createRun('wake-arrival-seed', config, newShip());
+    s = reduce(s, { type: 'FINISH_INTRO' }, deps);
+    s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
+    s = reduce(s, { type: 'ACK_OUTCOME' }, deps);
+    const A = s.currentSystemId;
+    const B = currentSector(s, config).systems[A].links[0];
+    s = structuredClone(s);
+    s.fuel = 99;
+    let atB = reduce(s, { type: 'JUMP', toSystemId: B }, deps);
+    expect(atB.phase).toBe('map'); // grace absorbs the first jump — no consumption
+    atB = structuredClone(atB);
+    atB.fuel = 99;
+    return { atB, A, B };
+  }
+
+  it('backtracking into a system the front consumes THIS turn → Wake-space fight, not death', () => {
+    const { atB, A } = atNeighbour();
+    // Grace spent, progress poised so this jump's +1 advance consumes A (oldest
+    // unconsumed on the trail) — the system being jumped INTO, this very turn.
+    atB.wake = { consumedIds: [], graceHundredths: 0, progressHundredths: 0 };
+    const back = reduce(atB, { type: 'JUMP', toSystemId: A }, deps);
+    expect(back.deathCause).toBeUndefined(); // the old bug: unconditional 'wake' death
+    expect(back.phase).toBe('combat'); // forced encounter instead
+    expect(back.combat?.origin).toBe('wake-space');
+    expect(back.wake.consumedIds).toContain(A); // the system did fall
+  });
+
+  it('jumping into the last dark system (whole trail eaten) → forced fight, not death', () => {
+    const { atB, A, B } = atNeighbour();
+    atB.wake = { consumedIds: [A, B], graceHundredths: 0, progressHundredths: 0 };
+    const back = reduce(atB, { type: 'JUMP', toSystemId: A }, deps);
+    expect(back.deathCause).toBeUndefined();
+    expect(back.phase).toBe('combat');
+    expect(back.combat?.origin).toBe('wake-space');
+  });
+
+  it('the forced encounter is survivable — the player can still flee/fight (not a game-over)', () => {
+    const { atB, A } = atNeighbour();
+    atB.wake = { consumedIds: [], graceHundredths: 0, progressHundredths: 0 };
+    const back = reduce(atB, { type: 'JUMP', toSystemId: A }, deps);
+    expect(back.combat?.outcome).toBe('ongoing'); // a live fight with choices, not death
+  });
+});

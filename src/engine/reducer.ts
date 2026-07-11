@@ -466,14 +466,19 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         config.wakeAdvancePerJump,
       );
       next.wake = result.wake;
-      if (result.caught) {
-        next.phase = 'dead';
-        next.deathCause = 'wake';
-        return next;
-      }
-
-      if (intoWakeSpace) {
-        const chance = wakeFightChance(config, approach, sensorBonus(next, deps));
+      // §4 BUGFIX: arriving in Wake-held space ALWAYS resolves through the
+      // encounter — never a silent instant-death. On a jump, `caught` can only
+      // mean the front is right on top of the system you just entered (either it
+      // fell as you arrived, or the whole trail is dark and this was the last of
+      // it), which per §4 is a desperate gamble, not a game-over. So we route it
+      // into the encounter with FORCED contact instead of killing the player.
+      // (Stationary overrun — drifting stranded, or an event's wakeAdvance — is
+      // still a real death; that lives in WAIT_DAY / applyEffects, not here.)
+      const frontOnYou = result.caught;
+      if (intoWakeSpace || frontOnYou) {
+        const chance = frontOnYou
+          ? 1 // the hunt is on top of you — no slipping past, but you can still fight/flee
+          : wakeFightChance(config, approach, sensorBonus(next, deps));
         const rng = new Rng(next.rngState.events);
         const contact = rng.next() < chance;
         next.rngState.events = rng.getState();

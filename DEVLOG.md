@@ -455,3 +455,19 @@ New `data/threat-bands.json` `rewardsByBand` (tunable): FUEL 2/4/6/8, INTEL 1/2/
 ### Flags for the designer
 - All the loot numbers + the ally policy are data/one-liners — tune after playtest.
 - Boarding difficulty is still swingy (a naive fight can kill the captain even on GREEN) — unchanged from Session 13, still worth a balance pass.
+
+---
+
+## Session 15 — 2026-07-11 · Bugfix — entering a Wake-consumed system no longer = silent death (§4)
+
+**Bug:** backtracking into a system on the same turn the Wake front reached it caused an unconditional `deathCause: 'wake'` game-over — no event, no fight, no choice.
+
+**Root cause (a resolution-order bug, as the designer suspected):** the JUMP handler advanced the Wake, then treated `advanceWake().caught` as instant death *before* the `intoWakeSpace` encounter branch ran. `caught` is set when the front consumes the system the player currently occupies (`next === currentSystemId`) — so jumping INTO a system that fell *this* turn (it wasn't consumed at jump time, so `intoWakeSpace` was false) skipped the encounter entirely and killed the player.
+
+**Fix (`src/engine/reducer.ts` JUMP):** on a jump, `caught` can only mean the front is right on top of the system you just entered — provably always a Wake-space entry (either it fell as you arrived, or the whole trail is dark and this was the last of it). Per §4 that is a *desperate gamble*, not a game-over, so it now routes into the Wake-space encounter with **forced contact** (a real ship fight — survivable via flee/bribe/surrender/win) instead of instant death. Long-dark space you weren't just overrun in still rolls the normal sneak/contact chance. The JUMP path no longer instant-deaths at all.
+
+**Overrun death still exists where it belongs** — the *stationary* paths: drifting while stranded (WAIT_DAY) and an event's `wakeAdvance` catching you (e.g. a probe transmission). Those are unchanged and still tested.
+
+**On the turn-resolution architecture question:** this was a map-layer ordering bug, not a combat one — ship/personal combat are already simultaneous (M2/M3). The lesson reinforced: "system goes dark + player arrives" must resolve *through* the encounter engine, never bypass it. No architecture change needed.
+
+**Verification:** 189 tests (3 new wakespace tests: backtrack-into-falling-system → fight not death; last-dark-system → forced fight; the encounter is a live/survivable fight. Plus the old reducer "caught = death" test corrected to assert the §4 encounter). Stationary wake-death coverage retained (stranding/probe). Build/tsc/lint clean.

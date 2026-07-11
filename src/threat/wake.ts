@@ -31,6 +31,11 @@ export interface WakeAdvanceResult {
    * trail is fully consumed and a consumption was due. Deliberately NOT
    * `consumedIds.includes(current)`: transiting already-consumed space is a
    * survivable gamble.
+   *
+   * At an ARRIVAL point (a jump), `caught` means "the front is right on top of
+   * the system you just entered" — per §4 that's a forced Wake-space encounter,
+   * NOT a silent death (see the JUMP handler). At a STATIONARY point (drifting
+   * stranded, or an event's wakeAdvance), it is the overrun that ends the run.
    */
   caught: boolean;
 }

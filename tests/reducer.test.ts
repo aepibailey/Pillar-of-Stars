@@ -343,7 +343,7 @@ describe('death', () => {
     expect(after.strandedDays).toBe(0);
   });
 
-  it('being caught by the Wake ends the run', () => {
+  it('the front arriving on a jump is a Wake-space fight, never a silent death (§4)', () => {
     let s = toMap();
     // Exhaust grace, then bounce between two systems until the front arrives.
     const maxSteps = 30;
@@ -354,12 +354,14 @@ describe('death', () => {
       s = structuredClone(s);
       s.fuel = 99; // isolate the wake mechanic from fuel death
       s = reduce(s, { type: 'JUMP', toSystemId: target }, deps);
-      if (s.phase === 'event') {
-        s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
-        s = reduce(s, { type: 'ACK_OUTCOME' }, deps);
-      }
     }
-    expect(s.phase).toBe('dead');
-    expect(s.deathCause).toBe('wake');
+    // Entering Wake-held space (already-dark, or the front falling on you the
+    // moment you arrive) ALWAYS routes through the encounter — a survivable
+    // ship fight, not an unconditional game-over. The real overrun death lives
+    // on the stationary paths (stranded drift, event wakeAdvance) — see
+    // stranding.test.ts / probe.test.ts.
+    expect(s.phase).toBe('combat');
+    expect(s.combat?.origin).toBe('wake-space');
+    expect(s.deathCause).toBeUndefined();
   });
 });
