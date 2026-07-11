@@ -1,0 +1,33 @@
+{
+  "_note": "Personal combat (§7.2) config + boarding scenario data. Captain-solo for M3; zone-based cover, heat instead of ammo. foeByBand scales the boarding crew off the ship's threat band (§7.4).",
+  "config": {
+    "heatMax": 4,
+    "coolRate": 1,
+    "aimedHeat": 3,
+    "snapHeat": 1,
+    "aimedAcc": 0.85,
+    "snapAcc": 0.6,
+    "coverPerLevel": 0.22,
+    "suppressPenalty": 0.3,
+    "captainHp": 14,
+    "captainAccuracy": 0.78,
+    "captainLethalDamage": 4,
+    "captainStunDamage": 3,
+    "parleyBaseByBand": [0.6, 0.38, 0.18, 0.05],
+    "foeByBand": {
+      "GREEN": { "hp": 5, "acc": 0.5, "dmg": 3, "stunMax": 4 },
+      "SEASONED": { "hp": 7, "acc": 0.6, "dmg": 4, "stunMax": 5 },
+      "VETERAN": { "hp": 9, "acc": 0.7, "dmg": 5, "stunMax": 6 },
+      "ELITE": { "hp": 12, "acc": 0.8, "dmg": 6, "stunMax": 7 }
+    },
+    "zones": [
+      { "id": "airlock", "name": "Airlock", "cover": 1 },
+      { "id": "corridor", "name": "Corridor", "cover": 2 },
+      { "id": "bridge", "name": "Bridge", "cover": 2 }
+    ],
+    "items": [
+      { "id": "stim", "name": "Stim", "kind": "heal", "amount": 6 },
+      { "id": "stun-grenade", "name": "Stun Grenade", "kind": "stun-blast", "amount": 4 }
+    ]
+  }
+}
