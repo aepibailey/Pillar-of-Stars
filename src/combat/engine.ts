@@ -283,11 +283,11 @@ function resolveHit(
 ): void {
   if (def.type === 'missile') {
     if (rng.next() < target.pdChance) {
-      log.push(`${attackerLabel}'s ${def.name} — intercepted by point defense.`);
+      log.push(`${attackerLabel}'s ${def.name} — shot down by point defense.`);
       return;
     }
     applyDamage(target, def.damage, targetId, config);
-    log.push(`${attackerLabel}'s ${def.name} slips the shields and strikes ${targetId}.`);
+    log.push(`${attackerLabel}'s ${def.name} — slips past point defense and shields, strikes ${targetId}.`);
     return;
   }
 

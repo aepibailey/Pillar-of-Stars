@@ -54,6 +54,20 @@ describe('launching combat from the map', () => {
     expect(s.stats.combats).toBe(1);
   });
 
+  it('the very first fight is a GREEN shakedown (derelict-scavenger), later fights roll freely', () => {
+    // Full enemy roster, every survey hostile: the first random fight must be
+    // the green opener so the first-combat tutorial has a winnable encounter.
+    const d = makeDeps({ config: { ...config, hostileEncounterChance: 1 } });
+    let s = toMap('first-green-seed', d);
+    s = exploreForFight(s, d);
+    s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, d);
+    s = reduce(s, { type: 'ACK_OUTCOME' }, d);
+    expect(s.phase).toBe('combat');
+    expect(s.combat?.enemyArchetypeId).toBe('derelict-scavenger');
+    expect(s.combat?.enemyThreat).toBe('GREEN');
+    expect(s.stats.combats).toBe(1);
+  });
+
   it('combat state rides in RunState and survives a save round-trip', () => {
     const d = forcedFightDeps('gunship');
     let s = toMap('save-mid-combat', d);

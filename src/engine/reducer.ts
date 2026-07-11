@@ -230,7 +230,15 @@ function launchCombat(
   const rng = new Rng(state.rngState.events);
   let archetype: EnemyArchetype;
   if (archetypeId === 'random') {
-    archetype = rng.pick(enemies);
+    // The player's very first fight is a GREEN shakedown so the first-combat
+    // tutorial always opens on a low-threat, winnable encounter (design call,
+    // Session 10). A scripted archetypeId (e.g. a derelict trap) keeps its own
+    // enemy; only the 'random' rolls are softened for that opening bout.
+    const firstFight = state.stats.combats === 0;
+    archetype =
+      firstFight && enemies.find((e) => e.id === 'derelict-scavenger')
+        ? (enemies.find((e) => e.id === 'derelict-scavenger') as EnemyArchetype)
+        : rng.pick(enemies);
   } else {
     archetype = enemies.find((e) => e.id === archetypeId) ?? enemies[0];
   }

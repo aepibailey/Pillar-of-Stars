@@ -42,6 +42,16 @@ const TARGET_CHOICES: { id: TargetId; short: string }[] = [
   { id: 'shields', short: 'Shd' },
 ];
 
+/**
+ * Rough point-defense read from a ship's flat intercept chance (§7.1). Deliberately
+ * a word band, not a percentage — a precise probability is sensor-tier (M3).
+ */
+function pdBand(chance: number): 'low' | 'moderate' | 'high' {
+  if (chance <= 0.15) return 'low';
+  if (chance <= 0.35) return 'moderate';
+  return 'high';
+}
+
 export interface IntroFrame {
   /** Path under /public, resolved against the deploy base (e.g. "intro/1-homeworld.svg"). */
   image: string;
@@ -294,8 +304,10 @@ export class App {
         <h2>The weapon types</h2>
         <p>• <b>Kinetic</b> — cheap, limited ammo. Shield layers soak it; useless until shields are down.
         <br>• <b>Laser</b> — power-hungry, strips shield layers fast and burns through once they're gone. Your shield-breaker.
-        <br>• <b>Missile</b> — ignores shields entirely, but the enemy's point-defense may shoot it down. Limited ammo.
+        <br>• <b>Missile</b> — ignores shields entirely, but the enemy's <b>point defense</b> may shoot it down. Each missile rolls on its own. Limited ammo.
         <br>• <b>Ion</b> — does no hull damage; it disables an enemy subsystem for a while. A setup weapon.</p>
+        <h2>Point defense</h2>
+        <p>Every ship has point defense that can <b>shoot down incoming missiles</b> — nothing else. The enemy box shows a rough <b>point defense</b> rating, and each of your missile lines shows the matching <b>intercept risk</b> (low / moderate / high). It's only a read, not a promise: the combat log always tells you whether a missile was shot down or slipped through.</p>
         <button class="primary" data-act="modal-close">Got it</button>
       </div>`;
   }
@@ -622,6 +634,13 @@ export class App {
         const selectable = st !== 'offline' && st !== 'no-ammo' && st !== 'cooldown';
         const ammo = slot.ammo < 0 ? '∞' : String(slot.ammo);
         const note = statusNote[st] ? ` <span class="warn">· ${statusNote[st]}</span>` : '';
+        // Missiles are the only shot point defense can stop — surface a rough
+        // intercept-risk read right on the line so the choice to fire it is
+        // informed (a precise % is sensor-tier, M3).
+        const pdNote =
+          def.type === 'missile'
+            ? ` <span class="dim">· intercept risk ${pdBand(c.enemy.pdChance)}</span>`
+            : '';
         const rowCls = st === 'underpowered' ? 'warn' : selectable ? '' : 'off';
         const btns = TARGET_CHOICES.map(
           (t) =>
@@ -629,7 +648,7 @@ export class App {
         ).join('');
         return `
           <div class="wrow ${rowCls}">
-            <div class="wname">${def.name} <span class="dim">${def.type} · ${def.powerCost}⚡ · ammo ${ammo}</span>${note}</div>
+            <div class="wname">${def.name} <span class="dim">${def.type} · ${def.powerCost}⚡ · ammo ${ammo}</span>${pdNote}${note}</div>
             <div class="tgts">${btns}</div>
           </div>`;
       })
@@ -715,11 +734,14 @@ export class App {
       .join(' ');
     // Threat band (§7.4): a readable difficulty tag; sensor upgrades sharpen it later.
     const band = threat ? `<span class="threat t-${threat.toLowerCase()}">${threat}</span>` : '';
+    // Enemy point-defense strength (rough): tells the player how likely their
+    // missiles are to be shot down before they choose to fire one (§7.1).
+    const pd = mine ? '' : ` · point defense ${pdBand(ship.pdChance)}`;
     return `
       <div class="shipstat ${mine ? 'mine' : 'foe'}">
         <div class="sname">${label} ${band}</div>
         <div class="hbar"><div class="hfill" style="width:${pct}%"></div><span>HULL ${ship.hull}/${ship.hullMax}</span></div>
-        <div class="dim">shields ${shields || '—'}${disabled ? ` · offline: ${disabled}` : ''}</div>
+        <div class="dim">shields ${shields || '—'}${disabled ? ` · offline: ${disabled}` : ''}${pd}</div>
       </div>`;
   }
 

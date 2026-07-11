@@ -306,3 +306,37 @@ The Knife Fight (§14) is done: ship subsystem model, power management with the 
 
 - **Tutorial rides the real first fight, not a scripted soft opener.** If the very first hostile roll is a tough archetype, the tutorial explains the screen but the fight itself can still be brutal. If we'd rather guarantee a gentle first encounter, that's a separate change (bias the first hostile roll toward `derelict-scavenger`/GREEN) — flagging for a designer call, not building unprompted.
 - Sensor upgrades → sharpen threat read + UNKNOWN (M3). General non-Wake name pool still wants expansion. Both unchanged from Session 7/8.
+
+---
+
+## Session 10 — 2026-07-11 · Green first fight + missile point-defense transparency
+
+### (a) First fight is now a GREEN shakedown
+
+Designer call: the player's very first fight should be gentle so the first-combat tutorial opens on a winnable bout. `launchCombat` (`src/engine/reducer.ts`) now forces the **first** combat of a run (`stats.combats === 0`) to the GREEN `derelict-scavenger` **whenever the encounter archetype is `'random'`** (hostile-ship surveys and wake-space contact). Scripted archetypes keep their own enemy — a derelict trap was already `derelict-scavenger` anyway — so nothing else is overridden, and every fight after the first rolls normally. New integration test asserts the first random fight is `derelict-scavenger`/GREEN; the existing gunship-forced tests still pass because those deps exclude the scavenger and fall through to the normal roll.
+
+### (b) Missile point-defense — what the mechanic actually is (reported before changing)
+
+Investigated `src/combat/engine.ts` `resolveHit`. The mechanic is a **flat, per-missile chance-to-intercept roll against the *defending* ship's `pdChance` stat** — a fixed 0–1 probability carried by each ship (`archetype.pdChance` / the player def):
+
+- For a missile: roll `rng.next() < target.pdChance`. Below ⇒ intercepted, no damage. Otherwise ⇒ full damage (missiles also ignore shields entirely — that's their identity).
+- It is **independent per missile** — each missile in a salvo rolls on its own. It is **NOT** tied to salvo size, missile count, a depletable PD magazine, sensors, or subsystem damage. Purely the target's flat `pdChance`.
+- Current values: `derelict-scavenger` 0.1, `gunship` 0.2, `shield-fortress` 0.3, `missile-boat` 0.5; **player 0.4**. Higher = better point defense = more of the *incoming* missiles get shot down.
+- Point defense affects **missiles only** — kinetic/laser/ion are governed by evasion/shields instead.
+
+The interception and the landed hit were **already logged**, so there was no silent disappearance; the gap was purely **pre-fire visibility** (the player couldn't see intercept risk before committing a missile).
+
+### (c) What was added to surface it
+
+- **Pre-fire read (rough, not precise):** a new `pdBand()` UI helper maps `pdChance` → `low / moderate / high` (a word band on purpose — a precise % is sensor-tier, M3). Each **missile weapon line** now shows `· intercept risk <band>`, and the **enemy ship box** shows `· point defense <band>`. Non-missile weapons show nothing (PD doesn't touch them).
+- **Log clarity (every action reported):** intercept now reads "**— shot down by point defense.**"; a missile that gets through now reads "**— slips past point defense and shields, strikes <target>.**" so both outcomes are explicit and consistent with the every-weapon-reports rule.
+- **Explain reference:** the `? Explain` sheet gained a **Point defense** section and its missile line now notes each missile rolls independently.
+
+### Verification
+
+151 tests (new first-fight-green integration test; existing interception unit tests at `pdChance` 0/1 still cover both branches). Build + tsc + lint clean. Tutorial + combat smokes pass at 390×844: first fight renders as **Scavenger Skiff GREEN** with "point defense low", the Missile Rack line shows "intercept risk low", zero console errors.
+
+### Notes / open forks for the designer
+
+- **PD is flat and target-based.** If you'd rather it scale with salvo size (saturating point defense — fire 4 missiles, the 4th is likelier to leak) or with a dedicated enemy PD subsystem the player can ion-disable, that's a mechanic change, not just a display one — flag it and I'll rework `resolveHit`. Today it's one independent roll per missile.
+- The rough band thresholds (≤0.15 low, ≤0.35 moderate, else high) are a first cut; easy to retune.
