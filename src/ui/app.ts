@@ -16,6 +16,7 @@ import type {
 } from '../combat/types';
 import { getEvent } from '../events/engine';
 import {
+  canBoard,
   currentSector,
   exploreCost,
   isStranded,
@@ -24,6 +25,8 @@ import {
 } from '../engine/reducer';
 import type { Store } from '../engine/store';
 import type { RunState, WakeApproach } from '../engine/types';
+import { aliveFoes, captain as groundCaptain, parleyChance } from '../ground/engine';
+import type { FireMode, GroundAction, GroundState } from '../ground/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
 import {
@@ -98,6 +101,9 @@ export class App {
   private shipBtn!: HTMLButtonElement;
   /** Current step of the first-combat tutorial, or null when inactive/done. */
   private tutorialStep: number | null = null;
+  /** Personal-combat targeting draft (selected foe + lethal/stun setting). */
+  private groundTarget: string | null = null;
+  private groundMode: FireMode = 'lethal';
 
   constructor(
     private store: Store,
@@ -493,6 +499,9 @@ export class App {
       case 'combat':
         this.renderCombat(overlay, state);
         return;
+      case 'ground':
+        this.renderGround(overlay, state);
+        return;
       case 'dead':
         this.renderEnd(overlay, state, false);
         return;
@@ -696,8 +705,14 @@ export class App {
           ${powerRow('engines', 'Engines')}
         </div>
         <div class="weapons">${weaponRows}</div>
+        ${
+          canBoard(c)
+            ? `<div class="boardcue">Their weapons and engines are dead — she's yours to <b>board</b>.</div>`
+            : ''
+        }
         <div class="cacts">
           <button class="primary" data-act="fire">Fire</button>
+          ${canBoard(c) ? '<button class="gate" data-act="board">Board her</button>' : ''}
           <button data-act="flee">Flee (${c.player.fleeCharge}/${c.fleeThreshold})</button>
           ${c.acceptsSurrender ? '<button data-act="surrender">Surrender</button>' : ''}
           ${c.acceptsBribe ? `<button data-act="bribe" ${canBribe ? '' : 'disabled'}>Bribe (${c.bribeCost} scrap)</button>` : ''}
@@ -732,6 +747,9 @@ export class App {
         combatAction: { type: 'FIRE', power: draft.power, targets: draft.targets },
       });
     });
+    overlay.querySelector('[data-act="board"]')?.addEventListener('click', () => {
+      this.store.dispatch({ type: 'BOARD' });
+    });
     overlay.querySelector('[data-act="flee"]')?.addEventListener('click', () => {
       this.store.dispatch({
         type: 'COMBAT_ACTION',
@@ -744,6 +762,152 @@ export class App {
     overlay.querySelector('[data-act="bribe"]')?.addEventListener('click', () => {
       this.store.dispatch({ type: 'COMBAT_ACTION', combatAction: { type: 'BRIBE' } });
     });
+  }
+
+  private dispatchGround(groundAction: GroundAction): void {
+    this.store.dispatch({ type: 'GROUND_ACTION', groundAction });
+  }
+
+  /** The boarding / personal-combat screen (§7.2). Zone-based, heat, cover. */
+  private renderGround(overlay: HTMLElement, state: RunState): void {
+    const g = state.ground;
+    if (!g) return;
+    overlay.hidden = false;
+    const config = this.store.getDeps().ground;
+
+    if (g.outcome !== 'ongoing') {
+      const verdict: Record<GroundState['outcome'], string> = {
+        ongoing: '',
+        neutralized: 'CORRIDOR TAKEN',
+        subdued: 'PRISONERS TAKEN',
+        allied: 'THEY STAND DOWN',
+        'captain-down': 'THE CAPTAIN FALLS',
+        withdrawn: 'YOU FALL BACK',
+      };
+      const paid: Record<string, string> = {
+        neutralized: `Salvage stripped: +${g.reward.scrap + 2} scrap · +${g.reward.fuel} fuel`,
+        subdued: `Hold + prisoners: +${g.reward.scrap + 4} scrap · +${g.reward.fuel} fuel`,
+        allied: `Goodwill and a little cargo: +${Math.floor(g.reward.scrap / 2)} scrap · +${g.reward.fuel + 1} fuel`,
+        withdrawn: 'You left the hull adrift — nothing gained.',
+        'captain-down': '',
+      };
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>${verdict[g.outcome]}</h1>
+          <p>${g.log[g.log.length - 1] ?? ''}</p>
+          ${paid[g.outcome] ? `<p class="dim">${paid[g.outcome]}</p>` : ''}
+          <button class="primary" data-act="ground-ack">Continue</button>
+        </div>`;
+      overlay.querySelector('[data-act="ground-ack"]')?.addEventListener('click', () => {
+        this.store.dispatch({ type: 'GROUND_ACK' });
+      });
+      return;
+    }
+
+    const cap = groundCaptain(g);
+    const live = aliveFoes(g);
+    if (!this.groundTarget || !live.some((f) => f.id === this.groundTarget)) {
+      this.groundTarget = live[0]?.id ?? null;
+    }
+    const bar = (cur: number, max: number, cls: string, label: string) =>
+      `<div class="hbar ${cls}"><div class="hfill" style="width:${Math.max(0, Math.round((cur / max) * 100))}%"></div><span>${label}</span></div>`;
+
+    const foeCards = g.fighters
+      .filter((f) => f.side === 'foe')
+      .map((f) => {
+        const z = g.zones.find((zz) => zz.id === f.zoneId);
+        const cover = z && z.coverHp > 0 ? `${z.name} cover ${z.coverHp}/${z.coverHpMax}` : `${z?.name} — exposed`;
+        const dn = f.down ? ` <span class="downtag">${f.down}</span>` : '';
+        const sel = this.groundTarget === f.id ? 'on' : '';
+        return `
+          <button class="gfoe ${sel} ${f.down ? 'down' : ''}" data-gtarget="${f.id}" ${f.down ? 'disabled' : ''}>
+            <div class="gname">${f.name}${dn}</div>
+            ${bar(f.hp, f.hpMax, 'foe', `HP ${f.hp}/${f.hpMax}`)}
+            <div class="dim">stun ${f.stun}/${f.stunMax} · ${cover}</div>
+          </button>`;
+      })
+      .join('');
+
+    const capZone = g.zones.find((z) => z.id === cap.zoneId);
+    const heatWarn = cap.heat >= cap.heatMax ? 'warn' : '';
+    const zoneBtns = g.zones
+      .map(
+        (z) =>
+          `<button class="gzone ${z.id === cap.zoneId ? 'on' : ''}" data-gmove="${z.id}">${z.name}<span class="sub">cover ${z.coverHp}/${z.coverHpMax}</span></button>`,
+      )
+      .join('');
+    const itemBtns = g.items
+      .filter((s) => s.count > 0)
+      .map((s) => {
+        const def = config.items.find((d) => d.id === s.id);
+        return `<button data-gitem="${s.id}">${def?.name ?? s.id} (${s.count})</button>`;
+      })
+      .join('');
+    const showParley = g.allyOffered || live.some((f) => f.hp < f.hpMax * 0.5);
+    const parleyPct = Math.round(parleyChance(g, config) * 100);
+
+    overlay.innerHTML = `
+      <div class="sheet ground">
+        <div class="chead"><h1>Boarding — turn ${g.turn}</h1></div>
+        <div class="dim">${g.encounterName} · <span class="threat t-${g.threat.toLowerCase()}">${g.threat}</span></div>
+        <div class="gfoes">${foeCards}</div>
+        <div class="clog">${g.log.map((l) => `<div>${l}</div>`).join('')}</div>
+        <div class="shipstat mine">
+          <div class="sname">The Captain</div>
+          ${bar(cap.hp, cap.hpMax, '', `HP ${cap.hp}/${cap.hpMax}`)}
+          <div class="dim ${heatWarn}">heat ${cap.heat}/${cap.heatMax} · ${capZone?.name}</div>
+        </div>
+        <div class="gmode"><span>Blaster</span>
+          <button class="gm ${this.groundMode === 'lethal' ? 'on' : ''}" data-gmode="lethal">Lethal</button>
+          <button class="gm ${this.groundMode === 'stun' ? 'on' : ''}" data-gmode="stun">Stun</button>
+        </div>
+        <div class="gzones"><div class="ptitle dim">Move up to</div><div class="gzrow">${zoneBtns}</div></div>
+        <div class="cacts">
+          <button class="primary" data-gact="aimed" ${this.groundTarget ? '' : 'disabled'}>Aimed shot</button>
+          <button data-gact="snap" ${this.groundTarget ? '' : 'disabled'}>Snap shot</button>
+          <button data-gact="suppress" ${this.groundTarget ? '' : 'disabled'}>Suppress</button>
+          <button data-gact="cover">Take cover</button>
+          <button data-gact="vent">Vent heat</button>
+          ${itemBtns}
+          ${showParley ? `<button class="gate" data-gact="parley">Parley (~${parleyPct}%)</button>` : ''}
+          <button data-gact="withdraw">Withdraw</button>
+        </div>
+      </div>`;
+
+    overlay.querySelectorAll<HTMLButtonElement>('[data-gtarget]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.groundTarget = btn.dataset.gtarget as string;
+        this.render();
+      });
+    });
+    overlay.querySelectorAll<HTMLButtonElement>('[data-gmode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.groundMode = btn.dataset.gmode as FireMode;
+        this.render();
+      });
+    });
+    overlay.querySelectorAll<HTMLButtonElement>('[data-gmove]').forEach((btn) => {
+      btn.addEventListener('click', () => this.dispatchGround({ type: 'GMOVE', zoneId: btn.dataset.gmove as string }));
+    });
+    overlay.querySelectorAll<HTMLButtonElement>('[data-gitem]').forEach((btn) => {
+      btn.addEventListener('click', () =>
+        this.dispatchGround({
+          type: 'GITEM',
+          itemId: btn.dataset.gitem as string,
+          targetId: this.groundTarget ?? undefined,
+        }),
+      );
+    });
+    const on = (act: string, fn: () => void) =>
+      overlay.querySelector(`[data-gact="${act}"]`)?.addEventListener('click', fn);
+    const t = () => this.groundTarget;
+    on('aimed', () => t() && this.dispatchGround({ type: 'GSHOOT', targetId: t() as string, shot: 'aimed', mode: this.groundMode }));
+    on('snap', () => t() && this.dispatchGround({ type: 'GSHOOT', targetId: t() as string, shot: 'snap', mode: this.groundMode }));
+    on('suppress', () => t() && this.dispatchGround({ type: 'GSUPPRESS', targetId: t() as string }));
+    on('cover', () => this.dispatchGround({ type: 'GTAKE_COVER' }));
+    on('vent', () => this.dispatchGround({ type: 'GVENT' }));
+    on('parley', () => this.dispatchGround({ type: 'GPARLEY' }));
+    on('withdraw', () => this.dispatchGround({ type: 'GWITHDRAW' }));
   }
 
   private shipStatus(ship: CombatShip, label: string, mine: boolean, read?: ThreatRead): string {

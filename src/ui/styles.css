@@ -521,3 +521,89 @@ button .sub {
   margin: 0;
   text-align: center;
 }
+
+/* ---------- Personal combat / boarding (§7.2) ---------- */
+.boardcue {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--good);
+  border: 1px solid var(--good);
+  border-radius: 6px;
+  background: #0c1a12;
+}
+.sheet.ground {
+  width: min(94vw, 460px);
+}
+.gfoes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+.gfoe {
+  margin: 0;
+  padding: 6px 8px;
+  border-color: #5a2530;
+}
+.gfoe.on {
+  border-color: var(--gold);
+  background: #2a2410;
+}
+.gfoe.down {
+  opacity: 0.45;
+}
+.gname {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.downtag {
+  font-size: 10px;
+  color: var(--dim);
+  text-transform: uppercase;
+  border: 1px solid var(--dim);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.gmode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.gmode span {
+  color: var(--dim);
+}
+.gm {
+  width: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 6px 14px;
+  text-align: center;
+}
+.gm.on {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: #2a2410;
+}
+.gzones {
+  margin: 8px 0;
+}
+.gzrow {
+  display: flex;
+  gap: 6px;
+}
+.gzone {
+  flex: 1;
+  min-height: 44px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  padding: 4px 2px;
+}
+.gzone.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #10203a;
+}

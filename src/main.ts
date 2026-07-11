@@ -20,8 +20,12 @@ const query = new URLSearchParams(location.search);
 const baseConfig = configJson as GameConfig;
 // Dev/testing affordance (alongside ?seed=): ?hostile=1 makes every survey a
 // ship fight, for exercising combat on demand. Never affects normal play.
-const config: GameConfig =
-  query.get('hostile') === '1' ? { ...baseConfig, hostileEncounterChance: 1 } : baseConfig;
+const config: GameConfig = {
+  ...baseConfig,
+  ...(query.get('hostile') === '1' ? { hostileEncounterChance: 1 } : {}),
+  // ?board=1: dev override that opens fights already boardable (§7.3 testing).
+  ...(query.get('board') === '1' ? { hostileEncounterChance: 1, debugBoardable: true } : {}),
+};
 const events = eventsJson as unknown as EventDef[];
 const weapons = weaponsJson as WeaponDef[];
 const enemies = enemiesJson as unknown as EnemyArchetype[];

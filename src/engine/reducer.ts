@@ -277,6 +277,12 @@ function launchCombat(
     fleeHeadstart,
     enemyNameOverride,
   });
+  if (config.debugBoardable) {
+    // Dev only (?board=1): open the fight already boardable.
+    const e = state.combat.enemy;
+    e.subsystems.weapons.damage = e.subsystems.weapons.level;
+    e.subsystems.engines.damage = e.subsystems.engines.level;
+  }
   state.phase = 'combat';
 }
 

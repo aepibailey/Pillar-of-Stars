@@ -163,6 +163,9 @@ export interface GameConfig {
   };
   /** Per-exploration chance of a hostile-ship encounter that launches combat. */
   hostileEncounterChance: number;
+  /** Dev/testing only (?board=1): start ship fights with the enemy's weapons +
+   * engines already disabled, so the Board flow is reachable on turn 1. */
+  debugBoardable?: boolean;
 }
 
 export type { SubsystemId };
