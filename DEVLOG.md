@@ -404,3 +404,33 @@ Re-read §7.2 (personal combat), §7.3 (boarding), §7.4 (reading the enemy) and
 - Wired into ship combat (§7.4): the enemy's TRUE band now displays as a sensor-scaled READ — UNKNOWN with sensors down, "GREEN ?" (vague/rough) at low level, exact band + "N crew" manifest at level 5. `CombatState` gained a per-encounter `readSeed`; **SCHEMA_VERSION 5 → 6**. Crew count is a placeholder (band-derived) until real crew generation lands with the boarding slice.
 - `?sensors=N` dev override added to exercise the tiers before the M5 upgrade shop (fork-3 recommendation). Verified on-screen at N=0/1/2/5.
 - **Still gated on your sign-off:** the probe/exploration probability previews (module supports them, wiring pending), and the personal-combat + boarding layers (forks 1 & 2). 167 tests, build/tsc/lint clean, combat + tutorial smokes green.
+
+---
+
+## Session 13 — 2026-07-11 · M3 "Boots and Blasters" — personal combat + boarding + sensor previews
+
+Built the M3 core on the sign-off (zone-based combat, captain-solo + seams, data + dev-override sensors), in five tested slices.
+
+### Personal combat engine (§7.2) — `src/ground/`
+Pure, seeded, same shape as ship combat (`startGround` / `groundReduce`, **simultaneous** resolution, RNG cursor in state). **Zone-based** cover that degrades as it soaks fire; **heat instead of ammo** (a shot over `heatMax` is refused until vented). Captain-solo, but the `Fighter.side` model leaves the seam for the companion (§6.3) and boarding-repel. Actions: aimed/snap shot (lethal or stun), move, take cover, suppress, vent, item (stim/stun grenade), parley, withdraw. All tuning + the corridor scenario live in `data/ground.json`.
+
+### Boarding flow (§7.3) — wired into the run
+- `RunState.ground` + `'ground'` phase; actions BOARD / GROUND_ACTION / GROUND_ACK; DeathCause `'boarding'`; **SCHEMA_VERSION 6 → 7**.
+- **Trigger:** a "Board her" button appears in ship combat the instant the enemy's weapons **and** engines are both disabled (`canBoard`). Boarding persists the player's ship damage out of the duel and fields a crew scaled off the ship's threat band + read.
+- **Three paths fall out of HOW the fight ends:** neutralized (any kill → full salvage +2, massacre flag), subdued (all stunned → salvage +4 + prisoners flag), allied (parley → half loot + goodwill flag; odds scale off band and how hurt the crew is). Captain-down → run over.
+
+### Sensor accuracy — one coherent engine (§7.4), now feeding both intel surfaces
+The `src/threat/sensor.ts` backbone (Session 12) now drives:
+- **Threat band read** in ship combat (Session 12): UNKNOWN → "GREEN ?" → exact + manifest by sensor level.
+- **Boarding crew** count/threat carried from the same ship read.
+- **Wake-risk preview on event choices (new):** any option that can advance the Wake shows a sensor-scaled risk — the probe's transmit (~30%) and spotted (~50%) odds, generalized. Fuzzy word at low sensors, rough % at high, "no reading" when down. So boarding intel and exploration/probe intel are the **same** accuracy system, as required.
+
+### Tuning knobs (all data, easy to retune in playtest)
+Foe strength by band, `captainHp 14`, heat 4 / cool 1 / aimed 3 / snap 1, cover 0.22/level, parley base `[0.6,0.38,0.18,0.05]`, boarding payouts (neutralize +2 / subdue +4 / ally half+fuel). Missile-rack salvo etc. unchanged.
+
+### Verification
+**184 tests** (17 new: 11 ground-engine — outcomes, parley scaling, cover degrade, heat refusal, determinism/round-trip; 6 boarding-integration — trigger gating, ship-damage carry, payouts, captain-down death). Build/tsc/lint clean. New `scripts/smoke-boarding.mjs` drives the whole flow at 390×844; combat/tutorial/main smokes still green; the ground UI, threat read (sensors 0–5), and probe preview (sensors 1 vs 5) all verified on-screen. Dev overrides: `?board=1` (open fights boardable), `?sensors=N`.
+
+### Flags for the designer
+- **Boarding balance is swingy.** A naive playthrough (aimed shots in the open, ignoring cover/parley/withdraw) can get the captain killed even on a GREEN crew — intended as a gamble, but the numbers are a first cut; all data-tunable. Worth a playtest pass.
+- **Deferred (flagged, not built):** the general **exploration preview** (next-system contents + loot-quality read) — it needs a contents/loot model that doesn't exist yet; the sensor engine already supports the read, only the data model is missing. Enemies-boarding-you (§7.3) also still deferred. Companion slot / crew traits / persistent injuries wait on the crew system (M4-ish).
