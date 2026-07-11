@@ -374,3 +374,27 @@ PD now has **two separated knobs**:
 ### Verification
 
 154 tests (4 new: full intercept when capacity ≥ salvo; disabled PD → whole salvo unopposed + log; salvo > capacity saturates with the overflow leaking at pdChance 1 + log; ion targets & damages the PD subsystem). Build + tsc + lint clean. Combat UI verified at 390×844: the 5-target row (incl. PD) fits, the green first fight shows "no point defense" + "intercept risk none — PD down". Existing interception tests updated for the capacity model.
+
+---
+
+## Milestone M2 — COMPLETE (2026-07-11) · "The Knife Fight" signed off
+
+Ship combat (§7.1) is done and playtested. What shipped across Sessions 6–11:
+
+- **Subsystem ship model (§5):** 9 subsystems with level/damage (effective = level − damage); hull, reactor pool, shields as discrete layers. Save/resume mid-fight (combat state + RNG cursor live in `RunState`).
+- **Power management:** reactor pool split across weapons/shields/engines each turn, each channel capped at its subsystem's effective level (allocated/max surfaced in the UI), total capped by the reactor. Reactor/subsystem damage shrinks what you can do.
+- **Weapons & resolution:** four types (kinetic/laser/missile/ion) with power cost, ammo, cooldown; targetable subsystems + hull; evasion from engine power; shield layers stripped by lasers, ignored by missiles. **Simultaneous turn resolution** (both sides' plans decided from turn-start state, both volleys resolve together; mutual destruction = loss).
+- **Point-defense rework (Session 10–11):** PD is now a **targetable `pointDefense` subsystem** with **capacity** (warheads engaged per turn) separated from **quality** (`pdChance`). Missiles fire **salvos**; two counter-paths — cripple PD (ion → 0 capacity, missiles land unopposed) or saturate it (salvo > capacity, overflow leaks). Full status transparency + four distinct got-through log lines.
+- **Encounter framing:** three+ archetypes with **threat bands** (§7.4, static for now), Wake-ship naming, derelict traps → real fights, surrender/flee/bribe with teeth, and a **GREEN first fight** so the tutorial opens winnable.
+- **First-combat tutorial (Session 9):** data-driven coach cards over the first real fight, once ever; the `? Explain` panel is the always-on reference.
+- **Combat reporting standard:** every weapon action is logged with a reason (hit/miss/underpowered/cooldown/no-ammo/offline/PD outcome); pre-fire warnings match post-fire results via shared `planVolley`.
+
+**Health:** 154 tests, build/tsc/lint clean, GitHub Pages deploy green, three Playwright smokes (map, combat, tutorial) passing at 390×844. Schema at v5.
+
+**Deferred out of M2 (tracked):** cinematic combat reveal → M7; general (non-Wake) ship-name pool expansion; sensor-sharpened threat reads → **M3 (now starting)**.
+
+---
+
+## Session 12 — 2026-07-11 · M3 "Boots and Blasters" — kickoff (planning, awaiting sign-off)
+
+Re-read §7.2 (personal combat), §7.3 (boarding), §7.4 (reading the enemy) and folded in the designer's 5-level sensor-leveling decision. Plan written and sent for sign-off; **no code until approved.** Findings on current-state readiness and the proposed architecture are captured in the sign-off request (boarding trigger is derivable from existing subsystem-damage state but unwired; threat band is static with `UNKNOWN` unused; probe transmit/spotted odds live in event weights with no preview; sensors currently only feed the wake-sneak chance). Sensor accuracy to be **one coherent system** feeding both the boarding threat-band read and general exploration reads.
