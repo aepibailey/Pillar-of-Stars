@@ -100,6 +100,14 @@ export interface RunState {
   intel: number;
 
   wake: WakeState;
+  /**
+   * The Wake front has reached the player's system (by ANY cause — jump, event
+   * side-effect, or stranded drift) and a forced §4 Wake-encounter is queued.
+   * Persisted because it can be set in one turn (an event outcome) and resolved
+   * in the next (the ACK). Resolving it ALWAYS launches a playable fight, never
+   * a silent death — see resolvePendingWake.
+   */
+  pendingWake: boolean;
   activeEvent: ActiveEvent | null;
   /** Active ship fight, or null. Its own RNG cursor rides inside it (§7.1). */
   combat: CombatState | null;

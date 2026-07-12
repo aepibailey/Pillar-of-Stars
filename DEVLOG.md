@@ -471,3 +471,21 @@ New `data/threat-bands.json` `rewardsByBand` (tunable): FUEL 2/4/6/8, INTEL 1/2/
 **On the turn-resolution architecture question:** this was a map-layer ordering bug, not a combat one — ship/personal combat are already simultaneous (M2/M3). The lesson reinforced: "system goes dark + player arrives" must resolve *through* the encounter engine, never bypass it. No architecture change needed.
 
 **Verification:** 189 tests (3 new wakespace tests: backtrack-into-falling-system → fight not death; last-dark-system → forced fight; the encounter is a live/survivable fight. Plus the old reducer "caught = death" test corrected to assert the §4 encounter). Stationary wake-death coverage retained (stranding/probe). Build/tsc/lint clean.
+
+---
+
+## Session 16 — 2026-07-11 · Bugfix (architecture) — the Wake reaching you ALWAYS routes to an encounter, by any cause (§4)
+
+**Bug (second variant):** resolving an in-system event (destroy a probe) whose side-effect advanced the Wake front onto the player's current system caused an instant `deathCause: 'wake'` on ACK — no fight, no choice. Same failure mode as Session 15's jump-arrival bug, different trigger.
+
+**Root cause:** the Session-15 fix only covered the JUMP path. There were **four** `advanceWake` sites, and three still turned `caught` into an unconditional death: `applyEffects` (event `wakeAdvance` — this bug), `EXPLORE` (the 0.2 intra-system advance), and `WAIT_DAY` (stranded drift). The user correctly called for an architecture fix, not another per-trigger patch.
+
+**Fix — centralized, no bypass:**
+- New `pendingWake` flag on `RunState` (persisted; **SCHEMA_VERSION 8 → 9**) — it can be set in one turn (an event outcome) and resolved in the next (the ACK), so it must survive save/resume.
+- **`advanceWakeInto(state, jumps)`** — the single Wake-advance entry point. Every site now calls it; if the front reaches the player it sets `pendingWake`, and it **never** kills directly.
+- **`resolvePendingWake(state, deps, headstart?)`** — launches the forced §4 Wake-space fight (survivable: flee/bribe/surrender/win) at each site's safe presentation point: JUMP (immediately), EXPLORE (immediately, takes precedence over the node's own event), ACK_OUTCOME (after the outcome text is read — this is the reported bug's path), WAIT_DAY (immediately).
+- The Wake can still end the run — but only by **losing** that fight: a lost `wake-space` combat now sets `deathCause: 'wake'` (the evocative death text, now at the right moment), everything else `'destroyed'`.
+
+**On the turn-resolution architecture question (M2 open item):** this is the fix at the architecture level the designer asked for. The insight: any state update that moves the Wake front must funnel through one advance-and-queue path, and the encounter must resolve as the next thing presented to the player — never a bypass. Combat itself stays simultaneous (unchanged); this was purely the map-layer advance/​resolve ordering, now unified. No per-trigger patching remains — `deathCause = 'wake'` is set in exactly one place (losing the fight).
+
+**Verification:** 191 tests (updated the two that encoded the old silent-death behavior — probe wakeAdvance-catch and stranded-drift-catch now assert the §4 encounter; added: EXPLORE-advance catch → fight, and losing the forced Wake fight → `deathCause 'wake'`). Build/tsc/lint clean. Every `advanceWake` site now routes through `advanceWakeInto`/`resolvePendingWake`.

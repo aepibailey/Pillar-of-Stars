@@ -357,11 +357,50 @@ describe('death', () => {
     }
     // Entering Wake-held space (already-dark, or the front falling on you the
     // moment you arrive) ALWAYS routes through the encounter — a survivable
-    // ship fight, not an unconditional game-over. The real overrun death lives
-    // on the stationary paths (stranded drift, event wakeAdvance) — see
-    // stranding.test.ts / probe.test.ts.
+    // ship fight, not an unconditional game-over.
     expect(s.phase).toBe('combat');
     expect(s.combat?.origin).toBe('wake-space');
     expect(s.deathCause).toBeUndefined();
+  });
+
+  it('the front reaching you mid-EXPLORE is a Wake fight, not a silent death (§4)', () => {
+    let s = toMap();
+    s = structuredClone(s);
+    s.fuel = 99;
+    // Grace spent, progress poised so this survey's 0.2 advance consumes the
+    // system the player is standing in.
+    s.wake = { consumedIds: [], graceHundredths: 0, progressHundredths: 90 };
+    const here = currentSector(s, config).systems[s.currentSystemId];
+    const node = here.nodes.find((n) => n.type !== 'ruin')!;
+    s = reduce(s, { type: 'EXPLORE', nodeId: node.id }, deps);
+    expect(s.deathCause).toBeUndefined();
+    expect(s.phase).toBe('combat');
+    expect(s.combat?.origin).toBe('wake-space');
+  });
+
+  it('LOSING the forced Wake fight is where the run finally ends (deathCause wake)', () => {
+    let s = toMap();
+    s = structuredClone(s);
+    s.fuel = 99;
+    const entry = s.currentSystemId;
+    const target = currentSector(s, config).systems[entry].links[0];
+    // Entry already dark, so the jump's +1 advance consumes the destination (now
+    // the oldest unconsumed) — the front lands on the system you just entered.
+    s.wake = { consumedIds: [entry], graceHundredths: 0, progressHundredths: 0 };
+    s = reduce(s, { type: 'JUMP', toSystemId: target }, deps);
+    expect(s.phase).toBe('combat'); // forced Wake encounter
+    // Never defend, never fire — take the beating until the hull fails.
+    let guard = 0;
+    while (s.phase === 'combat' && s.combat?.outcome === 'ongoing' && guard++ < 80) {
+      s = reduce(
+        s,
+        { type: 'COMBAT_ACTION', combatAction: { type: 'FLEE', power: { engines: 0, weapons: 0, shields: 0 } } },
+        deps,
+      );
+    }
+    expect(s.combat?.outcome).toBe('lost');
+    s = reduce(s, { type: 'COMBAT_ACK' }, deps);
+    expect(s.phase).toBe('dead');
+    expect(s.deathCause).toBe('wake'); // the hunt took you — the right death, at the right time
   });
 });

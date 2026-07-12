@@ -111,7 +111,7 @@ describe('the day-by-day sequence (all quiet days, rigged odds)', () => {
     expect(s.deathCause).toBe('adrift');
   });
 
-  it('with grace spent and the front at the door, the day-2 advance finds the drifter', () => {
+  it('with grace spent, the day-2 advance finds the drifter — a §4 fight, not silent death', () => {
     const quietDeps = riggedDeps(0, 0);
     let s = strandedState();
     // Trail is just the entry system the player is sitting on; no grace left.
@@ -122,8 +122,11 @@ describe('the day-by-day sequence (all quiet days, rigged odds)', () => {
     s = reduce(s, { type: 'ACK_OUTCOME' }, quietDeps);
     expect(s.phase).toBe('map');
     s = reduce(s, { type: 'WAIT_DAY' }, quietDeps); // day 2: the front arrives
-    expect(s.phase).toBe('dead');
-    expect(s.deathCause).toBe('wake');
+    // Being overrun while drifting is now a forced Wake-space encounter (which
+    // you might even win your way out of stranding with), never a game-over (§4).
+    expect(s.phase).toBe('combat');
+    expect(s.combat?.origin).toBe('wake-space');
+    expect(s.deathCause).toBeUndefined();
   });
 
   it('a 6th wait is impossible — the run is already over', () => {

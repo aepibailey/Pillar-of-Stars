@@ -36,12 +36,13 @@ import type {
   WakeApproach,
 } from './types';
 
+// v9: pendingWake — the Wake reaching you always routes to an encounter (§4).
 // v8: intel currency + band-scaled boarding loot.
 // v7: boarding / personal combat (RunState.ground + 'ground' phase).
 // v6: sensor-scaled threat read (combat carries a per-encounter readSeed).
 // v5: point-defense subsystem (targetable PD + saturating salvos).
 // v4: ship subsystem model + combat (was v3: strandedDays / Wait-1-Day).
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -109,6 +110,7 @@ export function createRun(seed: string, config: GameConfig, ship: ShipState): Ru
     scrap: config.startScrap,
     intel: 0,
     wake: createWakeState(config.wakeGraceJumps),
+    pendingWake: false,
     activeEvent: null,
     combat: null,
     ground: null,
@@ -165,6 +167,33 @@ export function wakeFightChance(
   return Math.max(0, base - config.wakeSpace.sneak.sensorReductionPerLevel * sensorLevel);
 }
 
+/**
+ * THE single Wake-advance entry point (§4). Advance the front from one source
+ * and fold it into state. If the front reaches the player's system — for ANY
+ * reason (a jump, an event's wakeAdvance, stranded drift) — it queues a forced
+ * Wake-encounter via `pendingWake`; it NEVER kills the player directly. Every
+ * advance site must go through here so none can silently bypass the encounter.
+ */
+function advanceWakeInto(state: RunState, advanceJumps: number): void {
+  const r = advanceWake(state.wake, state.visitOrder, state.currentSystemId, advanceJumps);
+  state.wake = r.wake;
+  if (r.caught) state.pendingWake = true;
+}
+
+/**
+ * If a Wake-encounter is queued (the front reached the player), launch it now:
+ * a forced ship fight (§4 "brutal odds, and they're looking for you") that is
+ * always survivable — flee/bribe/surrender/win. NEVER a silent game-over.
+ * Callers invoke this at their next safe presentation point. Returns true if a
+ * fight was launched (the caller should stop and return the state).
+ */
+function resolvePendingWake(state: RunState, deps: Deps, fleeHeadstart = 0): boolean {
+  if (!state.pendingWake) return false;
+  state.pendingWake = false;
+  launchCombat(state, deps, 'random', 'wake-space', fleeHeadstart);
+  return true;
+}
+
 function applyEffects(state: RunState, effects: EventEffects | undefined): void {
   if (!effects) return;
   if (effects.fuel) state.fuel = Math.max(0, state.fuel + effects.fuel);
@@ -175,15 +204,10 @@ function applyEffects(state: RunState, effects: EventEffects | undefined): void 
   }
   if (effects.death) state.deathCause = effects.death;
   if (effects.wakeAdvance) {
-    const pursuit = advanceWake(
-      state.wake,
-      state.visitOrder,
-      state.currentSystemId,
-      effects.wakeAdvance,
-    );
-    state.wake = pursuit.wake;
-    // Death lands on ACK so the player still reads the outcome text first.
-    if (pursuit.caught) state.deathCause = 'wake';
+    // An event side-effect can bring the front onto you (a probe transmitting,
+    // §4). If it reaches your system this queues the forced Wake-encounter,
+    // resolved on ACK so you read the outcome text first — never a silent death.
+    advanceWakeInto(state, effects.wakeAdvance);
   }
 }
 
@@ -404,9 +428,11 @@ function applyCombatResult(state: RunState, config: GameConfig): void {
   if (!c || c.outcome === 'ongoing') return;
 
   if (c.outcome === 'lost') {
+    // Losing the forced Wake-space fight IS how the hunt finally takes you —
+    // keep the 'wake' death for that, not the generic hull-breach text (§4).
     state.combat = null;
     state.phase = 'dead';
-    state.deathCause = 'destroyed';
+    state.deathCause = c.origin === 'wake-space' ? 'wake' : 'destroyed';
     return;
   }
 
@@ -459,42 +485,21 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         next.visitOrder.push(action.toSystemId);
       }
 
-      const result = advanceWake(
-        next.wake,
-        next.visitOrder,
-        next.currentSystemId,
-        config.wakeAdvancePerJump,
-      );
-      next.wake = result.wake;
-      // §4 BUGFIX: arriving in Wake-held space ALWAYS resolves through the
-      // encounter — never a silent instant-death. On a jump, `caught` can only
-      // mean the front is right on top of the system you just entered (either it
-      // fell as you arrived, or the whole trail is dark and this was the last of
-      // it), which per §4 is a desperate gamble, not a game-over. So we route it
-      // into the encounter with FORCED contact instead of killing the player.
-      // (Stationary overrun — drifting stranded, or an event's wakeAdvance — is
-      // still a real death; that lives in WAIT_DAY / applyEffects, not here.)
-      const frontOnYou = result.caught;
-      if (intoWakeSpace || frontOnYou) {
-        const chance = frontOnYou
-          ? 1 // the hunt is on top of you — no slipping past, but you can still fight/flee
-          : wakeFightChance(config, approach, sensorBonus(next, deps));
+      advanceWakeInto(next, config.wakeAdvancePerJump);
+      // If the front reached the system you just entered, the §4 encounter is
+      // already queued (forced). Otherwise, entering already-dark space rolls the
+      // normal contact chance — you may still slip through unseen.
+      const forced = next.pendingWake;
+      if (!forced && intoWakeSpace) {
         const rng = new Rng(next.rngState.events);
-        const contact = rng.next() < chance;
-        next.rngState.events = rng.getState();
-        if (contact) {
-          // Wake-held space is patrolled: contact launches a real ship fight
-          // (§7.1). The 'fast' approach's promised easier escape becomes a
-          // flee-charge head start.
-          launchCombat(
-            next,
-            deps,
-            'random',
-            'wake-space',
-            approach === 'fast' ? config.combat.fastApproachFleeHeadstart : 0,
-          );
-          return next;
+        if (rng.next() < wakeFightChance(config, approach, sensorBonus(next, deps))) {
+          next.pendingWake = true;
         }
+        next.rngState.events = rng.getState();
+      }
+      // The 'fast' approach's promised easier escape becomes a flee-charge head start.
+      if (resolvePendingWake(next, deps, approach === 'fast' ? config.combat.fastApproachFleeHeadstart : 0)) {
+        return next;
       }
       checkStranded(next, config);
       return next;
@@ -513,18 +518,10 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       next.fuel = Math.max(0, next.fuel - cost);
       next.exploredNodeIds.push(node.id);
 
-      const pursuit = advanceWake(
-        next.wake,
-        next.visitOrder,
-        next.currentSystemId,
-        config.wakeAdvancePerExplore,
-      );
-      next.wake = pursuit.wake;
-      if (pursuit.caught) {
-        next.phase = 'dead';
-        next.deathCause = 'wake';
-        return next;
-      }
+      advanceWakeInto(next, config.wakeAdvancePerExplore);
+      // The hunt arriving mid-survey is a forced §4 encounter, not a death —
+      // and it takes precedence over whatever this node would have held.
+      if (resolvePendingWake(next, deps)) return next;
 
       if (node.type === 'ruin' && here.id === sector.ruinSystemId) {
         fireEvent(next, findFixedEvent(events, 'sector-ruin'), node.id);
@@ -582,10 +579,14 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       const pendingCombat = next.activeEvent.pendingCombat;
       next.activeEvent = null;
       if (next.deathCause) {
-        // An effect (e.g. wakeAdvance) already sealed this run's fate.
+        // An outcome that explicitly ends the run (effects.death).
         next.phase = 'dead';
         return next;
       }
+      // The front reaching you via an event side-effect (a probe transmitting,
+      // §4) launches its forced encounter now — AFTER the outcome text was read.
+      // It supersedes any event-authored fight: the Wake is the bigger problem.
+      if (resolvePendingWake(next, deps)) return next;
       if (pendingCombat) {
         // The event resolved into a fight (e.g. the hostile-ship encounter).
         launchCombat(next, deps, pendingCombat, 'hostile-event', 0);
@@ -627,20 +628,12 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
 
       next.strandedDays++;
 
-      // The hunt closes while you drift: 1 jump per full N days waited.
+      // The hunt closes while you drift: 1 jump per full N days waited. If it
+      // reaches you, it's a forced §4 encounter (a fight you might even win your
+      // way out of stranding with), never a silent death.
       if (next.strandedDays % cfg.wakeAdvanceEveryDays === 0) {
-        const pursuit = advanceWake(
-          next.wake,
-          next.visitOrder,
-          next.currentSystemId,
-          cfg.wakeAdvanceJumps,
-        );
-        next.wake = pursuit.wake;
-        if (pursuit.caught) {
-          next.phase = 'dead';
-          next.deathCause = 'wake';
-          return next;
-        }
+        advanceWakeInto(next, cfg.wakeAdvanceJumps);
+        if (resolvePendingWake(next, deps)) return next;
       }
 
       const rng = new Rng(next.rngState.events);

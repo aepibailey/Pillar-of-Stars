@@ -120,19 +120,25 @@ describe('wakeAdvance effect integration', () => {
     expect(spentGrace + gainedProgress).toBe(expected);
   });
 
-  it('a wakeAdvance that catches the player kills on ACK, after the text is read', () => {
+  it('a wakeAdvance that reaches the player launches a §4 encounter on ACK — never a silent death', () => {
     let s = toMapRigged();
     s = structuredClone(s);
-    // No grace left and the trail is just the entry system the player stands on.
+    // No grace left and the trail is just the entry system the player stands on,
+    // so the event's +2 wakeAdvance brings the front onto the player this turn.
     s.wake = { consumedIds: [], graceHundredths: 0, progressHundredths: 0 };
     const sec = getSector(s.seed, 0, config);
     const node = sec.systems[s.currentSystemId].nodes.find((n) => n.type !== 'ruin');
     s = reduce(s, { type: 'EXPLORE', nodeId: (node as { id: string }).id }, riggedDeps);
     expect(s.phase).toBe('event'); // survived the 0.2 explore advance
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, riggedDeps);
+    // The bug was: deathCause set here, phase 'dead' on ACK. Now: the encounter
+    // is QUEUED, the outcome text still shows, and NO death is set.
     expect(s.phase).toBe('event'); // still reading the outcome
-    expect(s.deathCause).toBe('wake');
+    expect(s.deathCause).toBeUndefined();
+    expect(s.pendingWake).toBe(true);
     s = reduce(s, { type: 'ACK_OUTCOME' }, riggedDeps);
-    expect(s.phase).toBe('dead');
+    expect(s.phase).toBe('combat'); // a playable Wake-space fight, not a game-over
+    expect(s.combat?.origin).toBe('wake-space');
+    expect(s.pendingWake).toBe(false);
   });
 });
