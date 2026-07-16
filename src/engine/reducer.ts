@@ -24,11 +24,15 @@ import { nearestStationSystemId } from '../galaxy/search';
 import type { Sector } from '../galaxy/types';
 import { groundReduce, startGround } from '../ground/engine';
 import type { GroundAction, GroundConfig } from '../ground/types';
+import { generateSpecies } from '../species/generate';
 import { THREAT_ORDER } from '../threat/sensor';
 import { advanceWake, createWakeState, isConsumed } from '../threat/wake';
 import { deriveSeed, Rng } from './rng';
+import type { SpeciesParts } from '../species/types';
 import type {
   Character,
+  FounderSeed,
+  FoundersDef,
   GameConfig,
   RunState,
   ShipState,
@@ -36,13 +40,15 @@ import type {
   WakeApproach,
 } from './types';
 
+// v10: M4 — founding couple, crew/growth model, codex, species layer, contact,
+//      succession ('contact'/'succession' phases; ascendLocked; ironman).
 // v9: pendingWake — the Wake reaching you always routes to an encounter (§4).
 // v8: intel currency + band-scaled boarding loot.
 // v7: boarding / personal combat (RunState.ground + 'ground' phase).
 // v6: sensor-scaled threat read (combat carries a per-encounter readSeed).
 // v5: point-defense subsystem (targetable PD + saturating salvos).
 // v4: ship subsystem model + combat (was v3: strandedDays / Wait-1-Day).
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export type Action =
   | { type: 'NEW_RUN'; seed: string }
@@ -58,6 +64,12 @@ export type Action =
   | { type: 'BOARD' } // dock a disabled ship → personal combat (§7.3)
   | { type: 'GROUND_ACTION'; groundAction: GroundAction }
   | { type: 'GROUND_ACK' }
+  // First contact (§8): sensors → decode → dialogue.
+  | { type: 'CONTACT_PROCEED' }
+  | { type: 'CONTACT_DECODE' }
+  | { type: 'CONTACT_DIALOGUE'; stance: 'peaceful' | 'trade' | 'guarded' }
+  | { type: 'CONTACT_WITHDRAW' }
+  | { type: 'CONTACT_ACK' }
   | { type: 'REPAIR'; target: 'hull' | SubsystemId };
 
 export interface Deps {
@@ -72,6 +84,10 @@ export interface Deps {
   ground: GroundConfig;
   /** Threat-band boarding loot table (§7.3/§7.4). */
   threatRewards: ThreatRewards;
+  /** v0.7 founding couple creation values (§6.0). */
+  founders: FoundersDef;
+  /** Species component pools (§8). */
+  speciesParts: SpeciesParts;
 }
 
 /** Build a fresh player ship (§5) from the data-driven class definition. */
@@ -89,16 +105,56 @@ export function buildPlayerShip(
   );
 }
 
-export function createRun(seed: string, config: GameConfig, ship: ShipState): RunState {
+/** Build one founding character (v0.7 §6.0) from its creation seed. */
+function makeFounder(id: string, seedDef: FounderSeed, role: 'captain' | 'crew'): Character {
+  return {
+    id,
+    name: seedDef.name,
+    role,
+    gender: seedDef.gender,
+    isFounder: true,
+    // v0.7 §6.2: the spouse never deserts from morale while alive. Both
+    // founders carry the flag — the captain trivially can't desert, and it
+    // survives role swaps on succession without special-casing.
+    desertionImmune: true,
+    speciesId: 'human',
+    background: seedDef.background,
+    skills: seedDef.skills.map((s) => ({ ...s })),
+    traits: [seedDef.trait],
+    xp: 0,
+    level: 1,
+    unspentSkillPoints: 0,
+    scars: [],
+    alive: true,
+  };
+}
+
+export function createRun(
+  seed: string,
+  config: GameConfig,
+  ship: ShipState,
+  founders: FoundersDef,
+): RunState {
   const sector = getSector(seed, 0, config);
-  const captain: Character = { id: 'char-0', name: 'The Survivor', role: 'captain' };
+  // v0.7: the run begins with the founding couple — the captain and the spouse,
+  // who pre-fills the §6.3 companion slot from minute one.
+  const captain = makeFounder('char-0', founders.captain, 'captain');
+  const spouse = makeFounder('char-1', founders.spouse, 'crew');
   return {
     schemaVersion: SCHEMA_VERSION,
     runId: `run-${deriveSeed(seed, 'run-id').toString(36)}`,
     seed,
     phase: 'intro',
-    characters: [captain],
+    characters: [captain, spouse],
     captainId: captain.id,
+    companionId: spouse.id,
+    founderIds: [captain.id, spouse.id],
+    ascendLocked: false,
+    ironman: false,
+    codex: { entries: [] },
+    speciesStanding: {},
+    contactedSpeciesIds: [],
+    contact: null,
     ship,
     sectorIndex: 0,
     currentSystemId: sector.entrySystemId,
@@ -192,6 +248,62 @@ function resolvePendingWake(state: RunState, deps: Deps, fleeHeadstart = 0): boo
   state.pendingWake = false;
   launchCombat(state, deps, 'random', 'wake-space', fleeHeadstart);
   return true;
+}
+
+// ---------- first contact (§8) ----------
+
+/** This run's species — pure from the seed; never stored in state. */
+export function runSpecies(state: RunState, deps: Deps) {
+  return generateSpecies(state.seed, deps.speciesParts);
+}
+
+/**
+ * Decode-check success chance (§8): sensors + comms + the best xeno-linguist
+ * aboard, on top of a base. This is the skill check of the mini-event.
+ */
+export function decodeChance(state: RunState, deps: Deps): number {
+  const fc = deps.config.firstContact;
+  const bestLinguist = Math.max(
+    0,
+    ...state.characters
+      .filter((c) => c.alive)
+      .flatMap((c) => c.skills.filter((s) => s.domain === 'linguistics').map((s) => s.level)),
+  );
+  const p =
+    fc.baseDecodeChance +
+    fc.perSensorLevel * effLevel(state.ship.subsystems.sensors) +
+    fc.perCommsLevel * effLevel(state.ship.subsystems.comms) +
+    fc.perLinguistSkillLevel * bestLinguist;
+  return Math.max(0.05, Math.min(0.95, p));
+}
+
+/** Add a codex entry once (§8: knowledge is the meta-progression). */
+function codexAdd(state: RunState, entry: string): void {
+  if (!state.codex.entries.includes(entry)) state.codex.entries.push(entry);
+}
+
+/** Record a species as met + log its COMPONENTS to the codex (components are
+ * cross-run-stable ids; per-run species ids are not). */
+function recordContact(state: RunState, deps: Deps, speciesId: string): void {
+  if (!state.contactedSpeciesIds.includes(speciesId)) {
+    state.contactedSpeciesIds.push(speciesId);
+  }
+  const sp = runSpecies(state, deps).find((s) => s.id === speciesId);
+  if (!sp) return;
+  codexAdd(state, `morph:${sp.morphologyId}`);
+  codexAdd(state, `gov:${sp.governmentId}`);
+  for (const v of sp.valueIds) codexAdd(state, `value:${v}`);
+}
+
+/** Fire the first-contact mini-event with an uncontacted species, if any. */
+function launchContact(state: RunState, deps: Deps, speciesId: string): void {
+  state.contact = {
+    speciesId,
+    stage: 'sensors',
+    attemptsLeft: deps.config.firstContact.attempts,
+    rngState: deriveSeed(state.seed, `contact:${speciesId}`),
+  };
+  state.phase = 'contact';
 }
 
 function applyEffects(state: RunState, effects: EventEffects | undefined): void {
@@ -457,7 +569,13 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
   const { events, config, weapons } = deps;
 
   if (action.type === 'NEW_RUN') {
-    return createRun(action.seed, config, buildPlayerShip(deps.playerDef, weapons));
+    const fresh = createRun(action.seed, config, buildPlayerShip(deps.playerDef, weapons), deps.founders);
+    // Begin-again (§6.4): a new journey, armed with everything you've LEARNED.
+    // The codex is the only thing that crosses runs (knowledge meta-progression,
+    // pillar 3); the ironman preference also sticks — it's a setting, not progress.
+    if (state?.codex) fresh.codex = { entries: [...state.codex.entries] };
+    if (state?.ironman) fresh.ironman = true;
+    return fresh;
   }
 
   const next: RunState = structuredClone(state);
@@ -529,6 +647,20 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       }
 
       const rng = new Rng(next.rngState.events);
+      // First contact (§8): an uncontacted species may hail the survey. The
+      // species to meet is the seeded pick among those not yet contacted.
+      const unmet = runSpecies(next, deps).filter(
+        (sp) => !next.contactedSpeciesIds.includes(sp.id),
+      );
+      if (unmet.length > 0) {
+        const contactRoll = rng.next();
+        if (config.debugContact || contactRoll < config.firstContact.chance) {
+          const sp = unmet[Math.floor(rng.next() * unmet.length)];
+          next.rngState.events = rng.getState();
+          launchContact(next, deps, sp.id);
+          return next;
+        }
+      }
       // A hostile ship may be lying in wait (§7.1 encounter source).
       if (rng.next() < config.hostileEncounterChance) {
         next.rngState.events = rng.getState();
@@ -698,6 +830,103 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         return state;
       }
       applyGroundResult(next, deps);
+      return next;
+    }
+
+    // ---------- first contact (§8): sensors → decode → dialogue ----------
+
+    case 'CONTACT_PROCEED': {
+      if (next.phase !== 'contact' || next.contact?.stage !== 'sensors') return state;
+      next.contact = { ...next.contact, stage: 'decode' };
+      return next;
+    }
+
+    case 'CONTACT_DECODE': {
+      if (next.phase !== 'contact' || next.contact?.stage !== 'decode') return state;
+      const c = next.contact;
+      const rng = new Rng(c.rngState);
+      const fc = config.firstContact;
+
+      if (rng.next() < decodeChance(next, deps)) {
+        // Their language resolves into something you can answer.
+        next.contact = { ...c, stage: 'dialogue', rngState: rng.getState() };
+        return next;
+      }
+      if (rng.next() < fc.botchChance) {
+        // BOTCHED (§8): your reply meant something unforgivable in theirs.
+        // Lasting hostility — written into standing, permanent for the run.
+        next.speciesStanding[c.speciesId] =
+          (next.speciesStanding[c.speciesId] ?? 0) + fc.botchStanding;
+        recordContact(next, deps, c.speciesId);
+        next.flags[`botchedContact:${c.speciesId}`] = true;
+        next.contact = {
+          ...c,
+          stage: 'done',
+          rngState: rng.getState(),
+          outcomeText:
+            'Your reply goes out — and every light on their hull turns red at once. Whatever you just said in their language, there is no unsaying it. They will remember your hull.',
+        };
+        return next;
+      }
+      // A clean failure: the signal stays noise. Attempts are finite.
+      const attemptsLeft = c.attemptsLeft - 1;
+      if (attemptsLeft <= 0) {
+        // The window closes — they move on, unmet. You may cross paths again.
+        next.contact = {
+          ...c,
+          stage: 'done',
+          attemptsLeft: 0,
+          rngState: rng.getState(),
+          outcomeText:
+            'The signal folds back into noise, and their ship turns away, unhurried. Whoever they are, the conversation is over — for now.',
+        };
+        return next;
+      }
+      next.contact = { ...c, attemptsLeft, rngState: rng.getState() };
+      return next;
+    }
+
+    case 'CONTACT_DIALOGUE': {
+      if (next.phase !== 'contact' || next.contact?.stage !== 'dialogue') return state;
+      const c = next.contact;
+      const fc = config.firstContact;
+      const delta =
+        action.stance === 'peaceful' ? fc.peacefulStanding : action.stance === 'trade' ? 1 : 0;
+      next.speciesStanding[c.speciesId] = (next.speciesStanding[c.speciesId] ?? 0) + delta;
+      recordContact(next, deps, c.speciesId);
+      const sp = runSpecies(next, deps).find((s) => s.id === c.speciesId);
+      const text =
+        action.stance === 'peaceful'
+          ? `You open with peace, and the ${sp?.name ?? 'stranger'} answer in kind. A door in the galaxy that was closed an hour ago now stands open.`
+          : action.stance === 'trade'
+            ? `Commerce, it turns out, is a universal language. The ${sp?.name ?? 'stranger'} transmit a price list before they transmit a greeting.`
+            : `You keep your shields up and your words few. The ${sp?.name ?? 'stranger'} note the caution — and respect it, barely.`;
+      next.contact = { ...c, stage: 'done', outcomeText: text };
+      return next;
+    }
+
+    case 'CONTACT_WITHDRAW': {
+      // Backing away quietly is always allowed pre-dialogue: no record, no
+      // standing change — you simply haven't met them yet.
+      if (
+        next.phase !== 'contact' ||
+        !next.contact ||
+        next.contact.stage === 'dialogue' ||
+        next.contact.stage === 'done'
+      ) {
+        return state;
+      }
+      next.contact = null;
+      next.phase = 'map';
+      checkStranded(next, config);
+      return next;
+    }
+
+    case 'CONTACT_ACK': {
+      if (next.phase !== 'contact' || next.contact?.stage !== 'done') return state;
+      next.contact = null;
+      next.phase = 'map';
+      checkStranded(next, config);
       return next;
     }
 

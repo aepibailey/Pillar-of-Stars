@@ -11,7 +11,16 @@
 import type { CombatConfig, CombatShip, CombatState, SubsystemId } from '../combat/types';
 import type { GroundState } from '../ground/types';
 
-export type Phase = 'intro' | 'map' | 'event' | 'combat' | 'ground' | 'dead' | 'won';
+export type Phase =
+  | 'intro'
+  | 'map'
+  | 'event'
+  | 'combat'
+  | 'ground'
+  | 'contact'
+  | 'succession'
+  | 'dead'
+  | 'won';
 
 /**
  * 'wake'      — the front caught the player.
@@ -22,10 +31,91 @@ export type Phase = 'intro' | 'map' | 'event' | 'combat' | 'ground' | 'dead' | '
  */
 export type DeathCause = 'wake' | 'adrift' | 'robbed' | 'destroyed' | 'boarding';
 
+/** Cosmetic only (v0.7 §6.0) — pronouns and art selection, no mechanics. */
+export type Gender = 'M' | 'F';
+
+/** A skill is a domain plus a level; growth raises levels (§6.05). */
+export interface CharacterSkill {
+  domain: string;
+  level: number;
+}
+
+/**
+ * The 9 recruitment archetypes (§6.1). Content (skills/traits/values) is
+ * Phase-2 data; the ids are the architecture contract.
+ */
+export type RecruitArchetypeId =
+  | 'mercenary'
+  | 'duelist'
+  | 'wide-eyed-adventurer'
+  | 'long-shot'
+  | 'debtor'
+  | 'stowaway'
+  | 'defector'
+  | 'salvage'
+  | 'prisoner';
+
 export interface Character {
   id: string;
   name: string;
   role: 'captain' | 'crew';
+  gender?: Gender;
+  /** v0.7: one of the two founding characters. Founder death locks ASCEND (§9.4). */
+  isFounder: boolean;
+  /** v0.7 §6.2: the spouse never deserts from morale while alive. The future
+   * morale/desertion system MUST respect this flag. */
+  desertionImmune?: boolean;
+  /** 'human' for founders; a generated species id (§8) for alien recruits. */
+  speciesId: string;
+  /** Data-driven origin (§6.0). Colors events; grants starting skills+trait. */
+  background?: string;
+  /** Recruits only — how they came aboard (§6.1). Founders have none. */
+  archetype?: RecruitArchetypeId;
+  skills: CharacterSkill[];
+  traits: string[];
+  /** Personal agenda (§6.1) — goes journey-level on succession (§6.4). */
+  agenda?: string;
+  // Growth (§6.05) — strictly in-run; dies with the run.
+  xp: number;
+  level: number;
+  /** Level-ups bank a skill raise each; spending UI comes later. */
+  unspentSkillPoints: number;
+  /** Permanent marks from serious injury (§6.05). Ids into data/scars.json. */
+  scars: string[];
+  alive: boolean;
+}
+
+/** Creation values for one founder (v0.7 §6.0). From data until the creator UI. */
+export interface FounderSeed {
+  name: string;
+  gender: Gender;
+  background: string;
+  skills: CharacterSkill[];
+  trait: string;
+}
+
+/** The founding couple (v0.7): the player picks which one to play as. */
+export interface FoundersDef {
+  captain: FounderSeed;
+  spouse: FounderSeed;
+}
+
+/** Codex (§8): the ONLY meta-progression. Carries across begin-again. */
+export interface Codex {
+  /** Namespaced discovery ids, e.g. 'species:sp-0', 'species-part:morph:avian'. */
+  entries: string[];
+}
+
+/** First-contact mini-event state (§8): sensors → decode → dialogue → done. */
+export interface ContactState {
+  speciesId: string;
+  stage: 'sensors' | 'decode' | 'dialogue' | 'done';
+  /** Failed decode attempts remaining before the window closes. */
+  attemptsLeft: number;
+  /** Serialized RNG cursor — decode rolls survive save/resume. */
+  rngState: number;
+  /** Set when stage is 'done' — what happened, shown before returning to map. */
+  outcomeText?: string;
 }
 
 /** How the player enters Wake-held space (patch §6). */
@@ -77,10 +167,28 @@ export interface RunState {
   phase: Phase;
   deathCause?: DeathCause;
 
-  /** Everyone aboard. M1: just the starting captain. */
+  /** Everyone aboard. v0.7: starts with the two founders. Max 4 (§6). */
   characters: Character[];
-  /** Reference only — reassignable on succession (M4). */
+  /** Reference only — reassignable on succession (§6.4). */
   captainId: string;
+  /** The §6.3 companion slot — starts pre-filled by the spouse (v0.7). */
+  companionId: string | null;
+  /** The two founding characters (v0.7 §6.0). Either dying locks ASCEND. */
+  founderIds: string[];
+  /** §9.4 v0.7: has either founder died at any point? Permanent once true. */
+  ascendLocked: boolean;
+  /** Ironman (§6.4): any captain death is final — no continue-as-crew. */
+  ironman: boolean;
+  /** Knowledge meta-progression — carried across begin-again (§6.4/§8). */
+  codex: Codex;
+
+  // Species layer (§8). The species/dispositions themselves derive purely from
+  // the seed; only the player's mutations live here.
+  /** Player↔species standing. Negative = hostile. Botched contact writes here. */
+  speciesStanding: Record<string, number>;
+  contactedSpeciesIds: string[];
+  /** Active first-contact flow, or null. */
+  contact: ContactState | null;
 
   ship: ShipState;
 
@@ -173,9 +281,27 @@ export interface GameConfig {
   };
   /** Per-exploration chance of a hostile-ship encounter that launches combat. */
   hostileEncounterChance: number;
+  /** First contact (§8): trigger chance + the decode skill-check math. */
+  firstContact: {
+    /** Per-exploration chance while uncontacted species remain. */
+    chance: number;
+    /** Decode success = base + per-level sensor/comms/crew-skill bonuses. */
+    baseDecodeChance: number;
+    perSensorLevel: number;
+    perCommsLevel: number;
+    perLinguistSkillLevel: number;
+    /** A failed decode roll below this margin BOTCHES: lasting hostility. */
+    botchChance: number;
+    attempts: number;
+    /** Standing written by outcomes. */
+    botchStanding: number;
+    peacefulStanding: number;
+  };
   /** Dev/testing only (?board=1): start ship fights with the enemy's weapons +
    * engines already disabled, so the Board flow is reachable on turn 1. */
   debugBoardable?: boolean;
+  /** Dev/testing only (?contact=1): every exploration triggers first contact. */
+  debugContact?: boolean;
 }
 
 /** Per-threat-band boarding loot (§7.3/§7.4), data-driven for playtest tuning. */

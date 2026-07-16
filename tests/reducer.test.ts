@@ -1,4 +1,4 @@
-import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -17,12 +17,12 @@ import { getSector } from '../src/galaxy/generate';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground, threatRewards };
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts };
 
 const SEED = 'reducer-test-seed';
 
 function freshRun(): RunState {
-  return createRun(SEED, config, newShip());
+  return createRun(SEED, config, newShip(), founders);
 }
 
 /** Run through intro + opener so we land on the map. */

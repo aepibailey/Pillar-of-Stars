@@ -1,0 +1,23 @@
+{
+  "_note": "v0.7 founding couple (§6.0) — default creation values until the character-creator UI lands (Phase 2). Player-chosen names/genders/backgrounds will replace these; the SHAPE is the contract. Backgrounds reference data-driven origins; skills are domain+level pairs.",
+  "captain": {
+    "name": "Rhea Voss",
+    "gender": "F",
+    "background": "ex-military",
+    "skills": [
+      { "domain": "gunnery", "level": 2 },
+      { "domain": "tactics", "level": 1 }
+    ],
+    "trait": "steady-hands"
+  },
+  "spouse": {
+    "name": "Kael Voss",
+    "gender": "M",
+    "background": "drifter-merchant",
+    "skills": [
+      { "domain": "barter", "level": 2 },
+      { "domain": "piloting", "level": 1 }
+    ],
+    "trait": "silver-tongue"
+  }
+}

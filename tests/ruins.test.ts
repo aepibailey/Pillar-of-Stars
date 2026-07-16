@@ -1,4 +1,4 @@
-import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -10,7 +10,7 @@ import type { EventDef, EventOutcome } from '../src/events/types';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground, threatRewards };
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts };
 
 const decoyRuin = events.find((e) => e.id === 'ruin-silent-site') as EventDef;
 
@@ -68,7 +68,7 @@ describe('decoy ruin outcome distribution (patch §5)', () => {
 
 describe('ruin routing in the reducer', () => {
   function toMap(seed: string): RunState {
-    let s = createRun(seed, config, newShip());
+    let s = createRun(seed, config, newShip(), founders);
     s = reduce(s, { type: 'FINISH_INTRO' }, deps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, deps);

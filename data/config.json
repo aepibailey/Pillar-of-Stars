@@ -4,9 +4,19 @@
   "jumpFuelCost": 1,
   "exploreFuelCost": 0.25,
   "wakeSpace": {
-    "casual": { "fuelCost": 1, "fightChance": 0.7 },
-    "fast": { "fuelCost": 3, "fightChance": 0.6 },
-    "sneak": { "fuelCost": 4, "fightChance": 0.3, "sensorReductionPerLevel": 0.05 }
+    "casual": {
+      "fuelCost": 1,
+      "fightChance": 0.7
+    },
+    "fast": {
+      "fuelCost": 3,
+      "fightChance": 0.6
+    },
+    "sneak": {
+      "fuelCost": 4,
+      "fightChance": 0.3,
+      "sensorReductionPerLevel": 0.05
+    }
   },
   "wakeGraceJumps": 3,
   "wakeAdvancePerJump": 1,
@@ -42,5 +52,16 @@
     "hullPerScrap": 2,
     "subsystemDamagePerScrap": 1
   },
-  "hostileEncounterChance": 0.16
+  "hostileEncounterChance": 0.16,
+  "firstContact": {
+    "chance": 0.12,
+    "baseDecodeChance": 0.35,
+    "perSensorLevel": 0.08,
+    "perCommsLevel": 0.08,
+    "perLinguistSkillLevel": 0.1,
+    "botchChance": 0.15,
+    "attempts": 3,
+    "botchStanding": -2,
+    "peacefulStanding": 2
+  }
 }

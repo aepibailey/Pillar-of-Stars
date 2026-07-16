@@ -1,4 +1,4 @@
-import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts, newShip } from './fixtures';
 import { describe, expect, it } from 'vitest';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
@@ -15,7 +15,7 @@ import type { EventDef } from '../src/events/types';
 
 const config = configJson as GameConfig;
 const events = eventsJson as unknown as EventDef[];
-const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground, threatRewards };
+const deps: Deps = { events, config, weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts };
 
 describe('wake-space approach math (patch §6)', () => {
   it('base fight chances match the spec', () => {
@@ -36,7 +36,7 @@ describe('wake-space approach math (patch §6)', () => {
 
 describe('wake-space entry integration', () => {
   function baseState(): { s: RunState; targetId: string } {
-    let s = createRun('wakespace-seed', config, newShip());
+    let s = createRun('wakespace-seed', config, newShip(), founders);
     s = reduce(s, { type: 'FINISH_INTRO' }, deps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, deps);
@@ -108,7 +108,7 @@ describe('wake-space entry integration', () => {
 describe('entering a system as the Wake consumes it (§4 — never silent death)', () => {
   /** Get to system B via A, with a spare-fuel state ready to backtrack to A. */
   function atNeighbour(): { atB: RunState; A: string; B: string } {
-    let s = createRun('wake-arrival-seed', config, newShip());
+    let s = createRun('wake-arrival-seed', config, newShip(), founders);
     s = reduce(s, { type: 'FINISH_INTRO' }, deps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, deps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, deps);

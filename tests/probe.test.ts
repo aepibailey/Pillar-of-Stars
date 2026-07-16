@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, newShip } from './fixtures';
+import { weapons, enemies, playerDef, wakeShipNames, ground, threatRewards, founders, speciesParts, newShip } from './fixtures';
 import configJson from '../data/config.json';
 import eventsJson from '../data/events/core.json';
 import { createRun, reduce, type Deps } from '../src/engine/reducer';
@@ -89,10 +89,12 @@ describe('wakeAdvance effect integration', () => {
     wakeShipNames,
     ground,
     threatRewards,
+    founders,
+    speciesParts,
   };
 
   function toMapRigged(): RunState {
-    let s = createRun('probe-int-seed', config, newShip());
+    let s = createRun('probe-int-seed', config, newShip(), founders);
     s = reduce(s, { type: 'FINISH_INTRO' }, riggedDeps);
     s = reduce(s, { type: 'RESOLVE_OPTION', optionIndex: 0 }, riggedDeps);
     s = reduce(s, { type: 'ACK_OUTCOME' }, riggedDeps);

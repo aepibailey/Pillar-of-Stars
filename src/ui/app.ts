@@ -19,9 +19,11 @@ import type { EventOption } from '../events/types';
 import {
   canBoard,
   currentSector,
+  decodeChance,
   exploreCost,
   isStranded,
   jumpCost,
+  runSpecies,
   wakeFightChance,
 } from '../engine/reducer';
 import type { Store } from '../engine/store';
@@ -564,6 +566,9 @@ export class App {
       case 'ground':
         this.renderGround(overlay, state);
         return;
+      case 'contact':
+        this.renderContact(overlay, state);
+        return;
       case 'dead':
         this.renderEnd(overlay, state, false);
         return;
@@ -987,6 +992,63 @@ export class App {
     on('vent', () => this.dispatchGround({ type: 'GVENT' }));
     on('parley', () => this.dispatchGround({ type: 'GPARLEY' }));
     on('withdraw', () => this.dispatchGround({ type: 'GWITHDRAW' }));
+  }
+
+  /** First-contact mini-event (§8): sensors → decode → dialogue → done. */
+  private renderContact(overlay: HTMLElement, state: RunState): void {
+    const c = state.contact;
+    if (!c) return;
+    overlay.hidden = false;
+    const deps = this.store.getDeps();
+    const sp = runSpecies(state, deps).find((s) => s.id === c.speciesId);
+    const morph = deps.speciesParts.morphologies.find((m) => m.id === sp?.morphologyId);
+
+    if (c.stage === 'sensors') {
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>Unknown Contact</h1>
+          <p>${morph?.sensorReading ?? 'Something is out there, and it has seen you.'}</p>
+          <p class="dim">They are holding position. Whatever they are, they are waiting to see what you do.</p>
+          <button class="primary" data-act="ct-proceed">Open a channel</button>
+          <button data-act="ct-withdraw">Withdraw quietly</button>
+        </div>`;
+    } else if (c.stage === 'decode') {
+      const pct = Math.round(decodeChance(state, deps) * 100);
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>Linguistic Decoding</h1>
+          <p>Their transmission is structure without meaning — yet. Your sensors and comms grind at the grammar of an entire civilization.</p>
+          <p class="dim">Decode odds ~${pct}% (sensors + comms + crew) · ${c.attemptsLeft} attempt${c.attemptsLeft === 1 ? '' : 's'} left · a bad reply can offend permanently</p>
+          <button class="primary" data-act="ct-decode">Attempt the decode</button>
+          <button data-act="ct-withdraw">Withdraw quietly</button>
+        </div>`;
+    } else if (c.stage === 'dialogue') {
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>${sp?.name ?? 'They'} answer</h1>
+          <p>The channel resolves. On the other end: the ${sp?.name ?? 'strangers'} — ${morph?.adjective ?? 'unknown'} beings. Your first words as a people will be remembered.</p>
+          <button class="primary" data-act="ct-peace">Approach in peace</button>
+          <button data-act="ct-trade">Propose trade</button>
+          <button data-act="ct-guard">Stay guarded</button>
+        </div>`;
+    } else {
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>First Contact</h1>
+          <p>${c.outcomeText ?? ''}</p>
+          <button class="primary" data-act="ct-ack">Continue</button>
+        </div>`;
+    }
+
+    const on = (act: string, fn: () => void) =>
+      overlay.querySelector(`[data-act="${act}"]`)?.addEventListener('click', fn);
+    on('ct-proceed', () => this.store.dispatch({ type: 'CONTACT_PROCEED' }));
+    on('ct-decode', () => this.store.dispatch({ type: 'CONTACT_DECODE' }));
+    on('ct-withdraw', () => this.store.dispatch({ type: 'CONTACT_WITHDRAW' }));
+    on('ct-peace', () => this.store.dispatch({ type: 'CONTACT_DIALOGUE', stance: 'peaceful' }));
+    on('ct-trade', () => this.store.dispatch({ type: 'CONTACT_DIALOGUE', stance: 'trade' }));
+    on('ct-guard', () => this.store.dispatch({ type: 'CONTACT_DIALOGUE', stance: 'guarded' }));
+    on('ct-ack', () => this.store.dispatch({ type: 'CONTACT_ACK' }));
   }
 
   private shipStatus(ship: CombatShip, label: string, mine: boolean, read?: ThreatRead): string {
