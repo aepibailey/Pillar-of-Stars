@@ -77,10 +77,11 @@
       }
     ],
     "companion": {
-      "hp": 12,
+      "hp": 14,
       "acc": 0.68,
       "dmg": 3,
-      "stunMax": 6
+      "stunMax": 6,
+      "coverSeekHpFraction": 0.5
     }
   }
 }

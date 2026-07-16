@@ -522,3 +522,26 @@ Exploration can open contact with an unmet species (`?contact=1` forces; combat 
 - **Character-creator UI** is unbuilt: founders currently come from data/founders.json defaults (Rhea/Kael Voss). Needs a design pass whenever you want it.
 - **Systems the hooks await**: morale/desertion (reads `desertionImmune`, `moraleHitHeavy`…), reputation, agendas-as-events, quests (XP award parked), injuries→scars infliction, the ASCEND/RETRIBUTION endgame itself reads `ascendLocked`.
 - **Flagged, not fixed** (per instructions): sprite art lives in an accidentally double-nested directory — manifest maps it verbatim; if your art tool re-exports flat someday, only the manifest changes.
+
+---
+
+## Session 18 — 2026-07-16 · M4 fix — companion visibility & survivability (§6.3/§6.4/§7.3/§9.4)
+
+Playtest fix for two interacting defects that made the founding-couple boarding invisible and succession unreachable in practice: the §6.3 companion fighter existed and auto-acted, but was never rendered (log lines only), and — 12 HP vs the captain's 14, no cover instinct, starting exposed — got focused down within a couple of turns, so by captain-down there was no survivor and every first boarding loss looked final (ASCEND wrongly felt inevitable). Root cause was pre-diagnosed by the designer; encoded the four rulings, did not re-investigate.
+
+**Design rulings encoded (R1–R4, Shawn, final — do not revisit):**
+- **R1** — Foe doctrine stands: foes focus the weakest living crew member. Now a deliberate ruling; locked with a test + a code comment in `foeAction`/`focusCrew`.
+- **R2** — Companion parity & self-preservation: HP 14 (= captain); the spouse dives for intact cover when hurt + exposed, same instinct foes have.
+- **R3** — Companion death is a full-screen beat, not a log line.
+- **R4** — On an HP tie for "weakest" (both founders 14/14 on turn one), each foe tie-breaks via the seeded stream so fire spreads. RNG consumed only when a tie exists.
+
+**Changes:**
+- **Data** (`data/ground.json`): `companion.hp` 12→14; new `companion.coverSeekHpFraction` (0.5), tunable, mirroring the foe cover threshold.
+- **Engine** (`src/ground/engine.ts`): `companionAction` seeks cover before offense (R2); `foeAction` targets via `focusCrew(state, rng)` — weakest crew, seeded tie-break over ties (R1+R4). Plans still decided at turn start; simultaneous resolution unchanged (M3 ruling); all RNG on the seeded stream.
+- **UI** (`src/ui/app.ts` + new `src/ui/companion.ts`): the companion now renders as a `shipstat mine companion` panel beside the captain (name, HP bar, heat, zone, suppressed) — stays visible + muted + tagged when downed, so you see the body. Companion-death **beat**: a full-screen interstitial (name, portrait via the art-manifest resolver, and — for a founder — the §9.4 ASCEND-lock line), one "Continue the fight" ack, fires once per scene (gated by `readSeed`). The card/beat logic lives in pure `companionCardHtml`/`pendingCompanionBeat` helpers so the render path is unit-testable without a DOM (the bug was untested render logic).
+
+**Architecture/flags:**
+- The beat is a **UI-layer interstitial** (an instance `companionBeatAcked` flag keyed by `readSeed`), **not a new engine phase** — as the task preferred; no engine/state-machine change, so nothing to flag there.
+- **Display-before-apply (flagged, intentional):** `killCharacter` (ASCEND lock, slot vacation, morale/vengeance flags) still fires only at fight resolution in `applyGroundResult` — NOT moved. The beat *displays* the ASCEND-lock consequence mid-fight for a founder death; this is accurate (a founder death always locks ASCEND at resolution), so it's a display decision, not a state restructure. Gated on the fallen companion's `isFounder`, not on `state.ascendLocked` (which is correctly still false mid-fight).
+
+**Verification:** 259 tests (16 new: companion rendered incl. name+HP bar regression, HP-from-data, cover-seek move-vs-shoot, R1 weakest-target, R4 tie spread + determinism + no-RNG-when-untied, succession livability — a real GREEN boarding *won with the spouse alive* — and the death-beat trigger/founder-line/non-founder/mid-fight-only logic). Existing 243 stayed green (they force outcomes rather than depending on exact HP/RNG). Build/tsc/lint clean. Verified on-screen at 390×844: companion card visible ("Kael Voss" 14/14), death beat with portrait + ASCEND line, dismiss → muted down-card, no reappearance.

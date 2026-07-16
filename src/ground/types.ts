@@ -126,8 +126,10 @@ export interface GroundConfig {
   /** Parley base success by band index (GREEN..ELITE); scaled by how hurt they are. */
   parleyBaseByBand: number[];
   foeByBand: Record<string, { hp: number; acc: number; dmg: number; stunMax: number }>;
-  /** The §6.3 companion's combat template (skills refine this later). */
-  companion: { hp: number; acc: number; dmg: number; stunMax: number };
+  /** The §6.3 companion's combat template (skills refine this later). HP is at
+   * parity with the captain (R2); coverSeekHpFraction is the hurt threshold
+   * below which the companion dives for cover, mirroring the foe doctrine. */
+  companion: { hp: number; acc: number; dmg: number; stunMax: number; coverSeekHpFraction: number };
   zones: ZoneDef[];
   items: GroundItemDef[];
 }

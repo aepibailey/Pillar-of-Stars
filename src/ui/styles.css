@@ -618,3 +618,11 @@ button .sub {
   border: 1px solid var(--gold);
   margin: 0 auto 10px;
 }
+
+/* ---------- Companion panel (§6.3) ---------- */
+.shipstat.companion .sname {
+  color: var(--gold);
+}
+.shipstat.mine.down {
+  opacity: 0.5;
+}

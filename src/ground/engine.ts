@@ -220,29 +220,60 @@ function weakest(fighters: Fighter[]): Fighter | undefined {
   );
 }
 
+/**
+ * The foe's target (ruling R1): foes focus the WEAKEST living crew member —
+ * captain or companion. This is a deliberate design ruling, not an accident of
+ * the old bug. On an HP tie among the weakest (e.g. both founders at 14/14 on
+ * turn one), each foe picks randomly over the tied set via the seeded stream
+ * (ruling R4), so fire spreads naturally instead of ganking one body. RNG is
+ * consumed only when there IS a tie, so single-target turns don't shift the
+ * cursor.
+ */
+export function focusCrew(state: GroundState, rng: Rng): Fighter {
+  const crew = aliveCrew(state);
+  if (crew.length === 0) return captain(state);
+  const min = Math.min(...crew.map((c) => c.hp));
+  const tied = crew.filter((c) => c.hp === min);
+  return tied.length === 1 ? tied[0] : tied[rng.int(0, tied.length - 1)];
+}
+
+/** The nearest intact-cover zone a fighter isn't already standing in, or null. */
+function coverRefuge(state: GroundState, f: Fighter): string | null {
+  return state.zones.find((z) => z.coverHp > 0 && z.id !== f.zoneId)?.id ?? null;
+}
+
 type AutoPlan =
   | { kind: 'shoot'; shot: 'aimed' | 'snap'; targetId: string }
   | { kind: 'vent' }
   | { kind: 'move'; zoneId: string };
 
-/** Simple foe doctrine, decided from turn-start state (simultaneous). Foes
- * focus the weakest living crew member — captain or companion. */
-function foeAction(foe: Fighter, state: GroundState, config: GroundConfig): AutoPlan {
+/** Simple foe doctrine, decided from turn-start state (simultaneous). */
+export function foeAction(foe: Fighter, state: GroundState, config: GroundConfig, rng: Rng): AutoPlan {
   // Too hot to fire even a snap shot → vent.
   if (foe.heat + config.snapHeat > foe.heatMax) return { kind: 'vent' };
   // Hurt and exposed → dive for the nearest intact cover.
   if (foe.hp < foe.hpMax * 0.5 && coverLevel(state, foe) === 0) {
-    const cover = state.zones.find((z) => z.coverHp > 0 && z.id !== foe.zoneId);
-    if (cover) return { kind: 'move', zoneId: cover.id };
+    const refuge = coverRefuge(state, foe);
+    if (refuge) return { kind: 'move', zoneId: refuge };
   }
-  const target = weakest(aliveCrew(state)) ?? captain(state);
+  const target = focusCrew(state, rng); // R1 + R4
   // Aimed shot when cool enough, otherwise snap.
   const shot = foe.heat + config.aimedHeat <= foe.heatMax ? 'aimed' : 'snap';
   return { kind: 'shoot', shot, targetId: target.id };
 }
 
-/** The companion (§6.3) auto-acts: focus the weakest foe, vent when forced. */
-function companionAction(comp: Fighter, state: GroundState, config: GroundConfig): AutoPlan {
+/**
+ * The companion (§6.3) auto-acts. Offense: focus the weakest foe. But first
+ * (ruling R2): the spouse WANTS to survive the gunfight — given the same
+ * self-preservation instinct the foes have, they dive for intact cover when
+ * hurt and exposed. Threshold is data-tuned (coverSeekHpFraction), never
+ * hardcoded. Decided at turn start; simultaneous resolution is unchanged.
+ */
+export function companionAction(comp: Fighter, state: GroundState, config: GroundConfig): AutoPlan {
+  if (comp.hp < comp.hpMax * config.companion.coverSeekHpFraction && coverLevel(state, comp) === 0) {
+    const refuge = coverRefuge(state, comp);
+    if (refuge) return { kind: 'move', zoneId: refuge };
+  }
   const target = weakest(aliveFoes(state));
   if (!target) return { kind: 'vent' };
   if (comp.heat + config.aimedHeat <= comp.heatMax)
@@ -322,8 +353,10 @@ export function groundReduce(
   }
 
   // Decide foe AND companion actions from the TURN-START state (simultaneous
-  // with the captain) — nobody reacts to what lands this same turn.
-  const foePlans = aliveFoes(next).map((f) => ({ f, plan: foeAction(f, next, config) }));
+  // with the captain) — nobody reacts to what lands this same turn. Foe target
+  // tie-breaks (R4) draw on the shared seeded stream in fighter order, so the
+  // whole turn stays deterministic from the run seed.
+  const foePlans = aliveFoes(next).map((f) => ({ f, plan: foeAction(f, next, config, rng) }));
   const comp = companion(next);
   const compPlan = comp && comp.down === null ? companionAction(comp, next, config) : null;
 

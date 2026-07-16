@@ -31,6 +31,7 @@ import type { Store } from '../engine/store';
 import type { RunState, WakeApproach } from '../engine/types';
 import { aliveFoes, captain as groundCaptain, parleyChance } from '../ground/engine';
 import { founderArtKey, portraitUrl } from './art';
+import { companionCardHtml, pendingCompanionBeat } from './companion';
 import type { FireMode, GroundAction, GroundState } from '../ground/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
@@ -137,6 +138,9 @@ export class App {
   /** Personal-combat targeting draft (selected foe + lethal/stun setting). */
   private groundTarget: string | null = null;
   private groundMode: FireMode = 'lethal';
+  /** readSeed of the boarding whose companion-death beat has been acknowledged,
+   * so the §6.4 full-screen beat fires exactly once per scene (UI-layer only). */
+  private companionBeatAcked: string | null = null;
 
   constructor(
     private store: Store,
@@ -893,6 +897,32 @@ export class App {
       return;
     }
 
+    // §6.4 companion-death beat (R3): a founder falling is the most consequential
+    // event in a run, so it interrupts the fight full-screen — never just a log
+    // line. Fires once per scene (keyed by readSeed). The decision (mid-fight
+    // only; companion killed) is a pure helper; the App owns the once-gate and
+    // portrait. UI-layer interstitial — no engine phase.
+    const beat = pendingCompanionBeat(state);
+    if (beat && this.companionBeatAcked !== g.readSeed) {
+      const art = beat.isFounder ? portraitUrl(founderArtKey(beat.gender)) : portraitUrl(null);
+      // A founder death locks ASCEND at resolution (§9.4) — the beat DISPLAYS
+      // that certain consequence now, though killCharacter applies it on ack
+      // (see DEVLOG: display-before-apply is intentional, not a restructure).
+      overlay.innerHTML = `
+        <div class="sheet">
+          <h1>${beat.name} FALLS</h1>
+          ${art ? `<img class="succ-portrait" src="${art}" alt="${beat.name}">` : ''}
+          <p>${beat.name} goes down in the corridor and does not get back up. The fight is still on — but the ship just lost someone it can never replace.</p>
+          ${beat.isFounder ? `<p class="dim">A founder has fallen. The road to Ascension is closed for this journey — only Retribution remains (§9.4).</p>` : ''}
+          <button class="primary" data-act="companion-beat-ack">Continue the fight</button>
+        </div>`;
+      overlay.querySelector('[data-act="companion-beat-ack"]')?.addEventListener('click', () => {
+        this.companionBeatAcked = g.readSeed;
+        this.render();
+      });
+      return;
+    }
+
     const cap = groundCaptain(g);
     const live = aliveFoes(g);
     if (!this.groundTarget || !live.some((f) => f.id === this.groundTarget)) {
@@ -919,6 +949,9 @@ export class App {
 
     const capZone = g.zones.find((z) => z.id === cap.zoneId);
     const heatWarn = cap.heat >= cap.heatMax ? 'warn' : '';
+    // §6.3 companion panel (display only — the spouse auto-acts). Pure helper so
+    // the render path is unit-tested; stays visible + muted when they go down.
+    const companionCard = companionCardHtml(g);
     const zoneBtns = g.zones
       .map(
         (z) =>
@@ -946,6 +979,7 @@ export class App {
           ${bar(cap.hp, cap.hpMax, '', `HP ${cap.hp}/${cap.hpMax}`)}
           <div class="dim ${heatWarn}">heat ${cap.heat}/${cap.heatMax} · ${capZone?.name}</div>
         </div>
+        ${companionCard}
         <div class="gmode"><span>Blaster</span>
           <button class="gm ${this.groundMode === 'lethal' ? 'on' : ''}" data-gmode="lethal">Lethal</button>
           <button class="gm ${this.groundMode === 'stun' ? 'on' : ''}" data-gmode="stun">Stun</button>
