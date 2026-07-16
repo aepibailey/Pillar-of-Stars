@@ -13,21 +13,74 @@
     "captainAccuracy": 0.78,
     "captainLethalDamage": 4,
     "captainStunDamage": 3,
-    "parleyBaseByBand": [0.6, 0.38, 0.18, 0.05],
+    "parleyBaseByBand": [
+      0.6,
+      0.38,
+      0.18,
+      0.05
+    ],
     "foeByBand": {
-      "GREEN": { "hp": 5, "acc": 0.5, "dmg": 3, "stunMax": 4 },
-      "SEASONED": { "hp": 7, "acc": 0.6, "dmg": 4, "stunMax": 5 },
-      "VETERAN": { "hp": 9, "acc": 0.7, "dmg": 5, "stunMax": 6 },
-      "ELITE": { "hp": 12, "acc": 0.8, "dmg": 6, "stunMax": 7 }
+      "GREEN": {
+        "hp": 5,
+        "acc": 0.5,
+        "dmg": 3,
+        "stunMax": 4
+      },
+      "SEASONED": {
+        "hp": 7,
+        "acc": 0.6,
+        "dmg": 4,
+        "stunMax": 5
+      },
+      "VETERAN": {
+        "hp": 9,
+        "acc": 0.7,
+        "dmg": 5,
+        "stunMax": 6
+      },
+      "ELITE": {
+        "hp": 12,
+        "acc": 0.8,
+        "dmg": 6,
+        "stunMax": 7
+      }
     },
     "zones": [
-      { "id": "airlock", "name": "Airlock", "cover": 1 },
-      { "id": "corridor", "name": "Corridor", "cover": 2 },
-      { "id": "bridge", "name": "Bridge", "cover": 2 }
+      {
+        "id": "airlock",
+        "name": "Airlock",
+        "cover": 1
+      },
+      {
+        "id": "corridor",
+        "name": "Corridor",
+        "cover": 2
+      },
+      {
+        "id": "bridge",
+        "name": "Bridge",
+        "cover": 2
+      }
     ],
     "items": [
-      { "id": "stim", "name": "Stim", "kind": "heal", "amount": 6 },
-      { "id": "stun-grenade", "name": "Stun Grenade", "kind": "stun-blast", "amount": 4 }
-    ]
+      {
+        "id": "stim",
+        "name": "Stim",
+        "kind": "heal",
+        "amount": 6
+      },
+      {
+        "id": "stun-grenade",
+        "name": "Stun Grenade",
+        "kind": "stun-blast",
+        "amount": 4
+      }
+    ],
+    "companion": {
+      "hp": 12,
+      "acc": 0.68,
+      "dmg": 3,
+      "stunMax": 6
+    }
   }
 }

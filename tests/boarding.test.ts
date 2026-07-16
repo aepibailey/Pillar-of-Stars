@@ -55,16 +55,30 @@ describe('boarding trigger (§7.3)', () => {
     expect(aliveFoes(boarded.ground!).length).toBeGreaterThan(0);
   });
 
-  it('a captain-down boarding ends the run with the boarding death cause', () => {
+  it('captain-down with the companion ALSO dead ends the run (§6.4 boarding edge case)', () => {
     const { s, d } = toCombat('shield-fortress');
     disableEnemy(s);
     let g = reduce(s, { type: 'BOARD' }, d);
-    // Force the loss: zero the captain, then ack.
+    // Force the total loss: captain down, companion killed in the corridor too.
     g.ground!.fighters.find((f) => f.id === 'captain')!.hp = 0;
+    g.ground!.fighters.find((f) => f.id === 'companion')!.down = 'killed';
     g.ground!.outcome = 'captain-down';
     g = reduce(g, { type: 'GROUND_ACK' }, d);
     expect(g.phase).toBe('dead');
     expect(g.deathCause).toBe('boarding');
+    expect(g.ascendLocked).toBe(true); // both founders fell
+  });
+
+  it('captain-down with the companion SURVIVING offers succession (v0.7 §6.4)', () => {
+    const { s, d } = toCombat('gunship');
+    disableEnemy(s);
+    let g = reduce(s, { type: 'BOARD' }, d);
+    g.ground!.fighters.find((f) => f.id === 'captain')!.hp = 0;
+    g.ground!.outcome = 'captain-down';
+    g = reduce(g, { type: 'GROUND_ACK' }, d);
+    expect(g.phase).toBe('succession'); // the choice, never automatic death
+    expect(g.deathCause).toBeUndefined();
+    expect(g.ascendLocked).toBe(true); // a founder (the captain) died
   });
 
   it('a neutralized boarding pays salvage and returns to the map', () => {

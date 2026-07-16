@@ -70,6 +70,8 @@ export type Action =
   | { type: 'CONTACT_DIALOGUE'; stance: 'peaceful' | 'trade' | 'guarded' }
   | { type: 'CONTACT_WITHDRAW' }
   | { type: 'CONTACT_ACK' }
+  // Succession (§6.4): the captain fell, crew survives — the player chooses.
+  | { type: 'SUCCEED_AS'; characterId: string }
   | { type: 'REPAIR'; target: 'hull' | SubsystemId };
 
 export interface Deps {
@@ -481,6 +483,10 @@ function launchBoarding(state: RunState, deps: Deps): void {
   const c = state.combat as CombatState;
   persistShip(state, c.player);
   const idx = THREAT_ORDER.indexOf(c.enemyThreat as (typeof THREAT_ORDER)[number]);
+  // The §6.3 companion boards alongside the captain (v0.7: the spouse fills
+  // this slot from minute one). Whoever it is fights in the scene — and their
+  // survival is what makes §6.4 succession possible if the captain falls.
+  const comp = state.characters.find((ch) => ch.id === state.companionId && ch.alive);
   state.ground = startGround({
     threat: c.enemyThreat,
     foeCount: 2 + (idx < 0 ? 0 : idx), // matches the sensor manifest read
@@ -489,9 +495,41 @@ function launchBoarding(state: RunState, deps: Deps): void {
     encounterId: `${state.stats.combats}b`,
     config: deps.ground,
     reward: { scrap: c.salvageScrap, ammoType: ammoWeaponType(c.enemy, deps.weapons) },
+    companionName: comp?.name ?? null,
   });
   state.combat = null;
   state.phase = 'ground';
+}
+
+/**
+ * A character dies (§6.4/§9.4 v0.7). Marks them dead, and applies the fallout
+ * that does NOT depend on who they were to the run flow:
+ *  - either FOUNDER dying locks ASCEND permanently (symmetric, no path back);
+ *  - a dead companion vacates the §6.3 slot (reopens for recruitment);
+ *  - the SPOUSE dying (a founder who isn't the captain) seeds the vengeance
+ *    beat and the heavier-than-normal morale hit (hooks — morale is a future
+ *    system; the flags are its contract).
+ * Captain-death FLOW (succession vs. game over) is the caller's job.
+ */
+function killCharacter(state: RunState, characterId: string): void {
+  const ch = state.characters.find((c) => c.id === characterId);
+  if (!ch || !ch.alive) return;
+  ch.alive = false;
+  if (state.founderIds.includes(ch.id)) state.ascendLocked = true;
+  if (state.companionId === ch.id) state.companionId = null;
+  if (state.founderIds.includes(ch.id) && ch.id !== state.captainId) {
+    // Path B (v0.7 §6.4): the spouse falls, the captain lives on.
+    state.flags.spouseFallen = true;
+    state.flags.vengeanceSeeded = true;
+    state.flags.moraleHitHeavy = true; // heavier than a normal crew loss
+  } else if (ch.id !== state.captainId) {
+    state.flags.moraleHit = true; // a normal crew loss still stings
+  }
+}
+
+/** Living crew who could take up the journey (§6.4) — everyone but the captain. */
+export function successionCandidates(state: RunState): Character[] {
+  return state.characters.filter((c) => c.alive && c.id !== state.captainId);
 }
 
 /** Apply a resolved boarding back to the run (§7.3 paths), loot scaled by band (§7.4). */
@@ -499,12 +537,34 @@ function applyGroundResult(state: RunState, deps: Deps): void {
   const g = state.ground;
   if (!g || g.outcome === 'ongoing') return;
 
+  // The companion fought in this scene (§6.3). If they were killed — in ANY
+  // outcome, including a won fight — that death lands on the run: spouse-death
+  // path (v0.7 §6.4 B) if they were a founder, normal crew loss otherwise.
+  const compFighter = g.fighters.find((f) => f.id === 'companion');
+  const companionKilled = compFighter?.down === 'killed';
+  const companionCharId = state.companionId;
+
   if (g.outcome === 'captain-down') {
+    killCharacter(state, state.captainId);
+    if (companionKilled && companionCharId) killCharacter(state, companionCharId);
     state.ground = null;
-    state.phase = 'dead';
-    state.deathCause = 'boarding';
+    // §6.4 boarding edge case: succession requires the companion to fight
+    // their way back to the ship. If they fell too — or never boarded — the
+    // journey ends there, regardless of who stayed aboard. Ironman (§6.4)
+    // makes any captain death final.
+    const companionEscaped = compFighter !== undefined && compFighter.down === null;
+    if (!companionEscaped || state.ironman || successionCandidates(state).length === 0) {
+      state.phase = 'dead';
+      state.deathCause = 'boarding';
+      return;
+    }
+    // The expedition can live on — the CHOICE (§6.4) is the player's, never
+    // automatic: continue as a survivor, or begin again. Phase 'succession'
+    // presents it; SUCCEED_AS or NEW_RUN resolves it.
+    state.phase = 'succession';
     return;
   }
+  if (companionKilled && companionCharId) killCharacter(state, companionCharId);
 
   const loot = deps.threatRewards.rewardsByBand[g.threat] ?? { fuel: 0, intel: 0, ammo: 0 };
   if (g.outcome === 'neutralized') {
@@ -925,6 +985,33 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
     case 'CONTACT_ACK': {
       if (next.phase !== 'contact' || next.contact?.stage !== 'done') return state;
       next.contact = null;
+      next.phase = 'map';
+      checkStranded(next, config);
+      return next;
+    }
+
+    case 'SUCCEED_AS': {
+      // Continue-as-crew (§6.4): the successor is now the captain in full.
+      if (next.phase !== 'succession') return state;
+      const successor = next.characters.find(
+        (ch) => ch.id === action.characterId && ch.alive && ch.id !== next.captainId,
+      );
+      if (!successor) return state;
+
+      next.captainId = successor.id;
+      successor.role = 'captain';
+      // If the successor was the companion, the §6.3 slot they held reopens.
+      if (next.companionId === successor.id) next.companionId = null;
+
+      // Succession is survival, not a free respawn (§6.4) — the costs bite:
+      next.flags.moraleCratered = true; // heavy hit to all survivors (hook)
+      next.flags.reputationCooled = true; // personal trust doesn't convey (hook)
+      next.flags[`agendaLive:${successor.id}`] = true; // their agenda goes journey-level
+      // The Wake surges one extra jump during the chaos of the handover — and
+      // if that surge reaches you, it's the §4 forced encounter, mid-grief.
+      advanceWakeInto(next, 1);
+      if (resolvePendingWake(next, deps)) return next;
+
       next.phase = 'map';
       checkStranded(next, config);
       return next;

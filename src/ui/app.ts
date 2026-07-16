@@ -24,6 +24,7 @@ import {
   isStranded,
   jumpCost,
   runSpecies,
+  successionCandidates,
   wakeFightChance,
 } from '../engine/reducer';
 import type { Store } from '../engine/store';
@@ -569,6 +570,9 @@ export class App {
       case 'contact':
         this.renderContact(overlay, state);
         return;
+      case 'succession':
+        this.renderSuccession(overlay, state);
+        return;
       case 'dead':
         this.renderEnd(overlay, state, false);
         return;
@@ -992,6 +996,37 @@ export class App {
     on('vent', () => this.dispatchGround({ type: 'GVENT' }));
     on('parley', () => this.dispatchGround({ type: 'GPARLEY' }));
     on('withdraw', () => this.dispatchGround({ type: 'GWITHDRAW' }));
+  }
+
+  /** Succession (§6.4): the captain fell; the journey may continue — by CHOICE. */
+  private renderSuccession(overlay: HTMLElement, state: RunState): void {
+    overlay.hidden = false;
+    const fallen = state.characters.find((c) => c.id === state.captainId);
+    const candidates = successionCandidates(state);
+    const buttons = candidates
+      .map(
+        (c) =>
+          `<button class="gate" data-succ="${c.id}">Continue as ${c.name}<span class="sub">${
+            state.founderIds.includes(c.id) ? 'your spouse — ' : ''
+          }${c.background ?? 'crew'} · ${c.skills.map((s) => s.domain).join(', ')}</span></button>`,
+      )
+      .join('');
+    overlay.innerHTML = `
+      <div class="sheet">
+        <h1>THE CAPTAIN FALLS</h1>
+        <p>${fallen?.name ?? 'The captain'} is gone. Nothing undoes it. But the ship still holds air, and someone is still breathing aboard — the journey does not have to end here.</p>
+        <p class="dim">Succession is survival, not a respawn: morale craters, doors close, the Wake surges — and everything ${fallen?.name ?? 'they'} was leaves the game with them.${state.ascendLocked ? ' With a founder gone, the road to Ascension is closed for good.' : ''}</p>
+        ${buttons}
+        <button data-act="begin-again">Begin again<span class="sub">a new couple, a new galaxy — the codex and everything learned carries over</span></button>
+      </div>`;
+    overlay.querySelectorAll<HTMLButtonElement>('[data-succ]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.store.dispatch({ type: 'SUCCEED_AS', characterId: btn.dataset.succ as string });
+      });
+    });
+    overlay.querySelector('[data-act="begin-again"]')?.addEventListener('click', () => {
+      this.newRun();
+    });
   }
 
   /** First-contact mini-event (§8): sensors → decode → dialogue → done. */

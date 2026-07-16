@@ -17,6 +17,7 @@ import type {
 } from './types';
 
 const CAPTAIN_ID = 'captain';
+export const COMPANION_ID = 'companion';
 
 function bandIndex(band: ThreatBand): number {
   const i = THREAT_ORDER.indexOf(band as (typeof THREAT_ORDER)[number]);
@@ -27,8 +28,17 @@ export function aliveFoes(state: GroundState): Fighter[] {
   return state.fighters.filter((f) => f.side === 'foe' && f.down === null);
 }
 
+export function aliveCrew(state: GroundState): Fighter[] {
+  return state.fighters.filter((f) => f.side === 'crew' && f.down === null);
+}
+
 export function captain(state: GroundState): Fighter {
   return state.fighters.find((f) => f.id === CAPTAIN_ID) as Fighter;
+}
+
+/** The §6.3 companion in this scene, if one boarded. */
+export function companion(state: GroundState): Fighter | undefined {
+  return state.fighters.find((f) => f.id === COMPANION_ID);
 }
 
 function zoneOf(state: GroundState, id: string): Zone | undefined {
@@ -53,6 +63,8 @@ export interface StartGroundArgs {
   config: GroundConfig;
   /** Loot context carried from the disabled ship (scrap cargo + ammo type). */
   reward: { scrap: number; ammoType: import('../combat/types').WeaponType | null };
+  /** The §6.3 companion boarding alongside the captain, if any. */
+  companionName?: string | null;
 }
 
 export function startGround(args: StartGroundArgs): GroundState {
@@ -76,6 +88,27 @@ export function startGround(args: StartGroundArgs): GroundState {
     down: null,
     suppressed: false,
   };
+
+  // The companion (§6.3) fights at the captain's side, auto-acting on crew turns.
+  const crew: Fighter[] = [cap];
+  if (args.companionName) {
+    crew.push({
+      id: COMPANION_ID,
+      name: args.companionName,
+      side: 'crew',
+      hp: config.companion.hp,
+      hpMax: config.companion.hp,
+      stun: 0,
+      stunMax: config.companion.stunMax,
+      heat: 0,
+      heatMax: config.heatMax,
+      zoneId: zones[0].id,
+      accuracy: config.companion.acc,
+      damage: config.companion.dmg,
+      down: null,
+      suppressed: false,
+    });
+  }
 
   const tmpl = config.foeByBand[threat] ?? config.foeByBand.GREEN;
   const foes: Fighter[] = [];
@@ -104,7 +137,7 @@ export function startGround(args: StartGroundArgs): GroundState {
   const idx = bandIndex(threat);
   return {
     zones,
-    fighters: [cap, ...foes],
+    fighters: [...crew, ...foes],
     turn: 1,
     log: [`You breach the airlock. ${n} ${idx <= 1 ? 'nervous' : 'hardened'} crew hold the corridor.`],
     rngState: rng.getState(),
@@ -179,13 +212,22 @@ function resolveShot(
   }
 }
 
-/** Simple foe doctrine, decided from turn-start state (simultaneous). */
-function foeAction(
-  foe: Fighter,
-  state: GroundState,
-  config: GroundConfig,
-): { kind: 'shoot'; shot: 'aimed' | 'snap' } | { kind: 'vent' } | { kind: 'move'; zoneId: string } {
-  const cap = captain(state);
+/** Deterministic focus rule: the lowest-hp living target (ties → first). */
+function weakest(fighters: Fighter[]): Fighter | undefined {
+  return fighters.reduce<Fighter | undefined>(
+    (best, f) => (best === undefined || f.hp < best.hp ? f : best),
+    undefined,
+  );
+}
+
+type AutoPlan =
+  | { kind: 'shoot'; shot: 'aimed' | 'snap'; targetId: string }
+  | { kind: 'vent' }
+  | { kind: 'move'; zoneId: string };
+
+/** Simple foe doctrine, decided from turn-start state (simultaneous). Foes
+ * focus the weakest living crew member — captain or companion. */
+function foeAction(foe: Fighter, state: GroundState, config: GroundConfig): AutoPlan {
   // Too hot to fire even a snap shot → vent.
   if (foe.heat + config.snapHeat > foe.heatMax) return { kind: 'vent' };
   // Hurt and exposed → dive for the nearest intact cover.
@@ -193,10 +235,21 @@ function foeAction(
     const cover = state.zones.find((z) => z.coverHp > 0 && z.id !== foe.zoneId);
     if (cover) return { kind: 'move', zoneId: cover.id };
   }
+  const target = weakest(aliveCrew(state)) ?? captain(state);
   // Aimed shot when cool enough, otherwise snap.
   const shot = foe.heat + config.aimedHeat <= foe.heatMax ? 'aimed' : 'snap';
-  void cap;
-  return { kind: 'shoot', shot };
+  return { kind: 'shoot', shot, targetId: target.id };
+}
+
+/** The companion (§6.3) auto-acts: focus the weakest foe, vent when forced. */
+function companionAction(comp: Fighter, state: GroundState, config: GroundConfig): AutoPlan {
+  const target = weakest(aliveFoes(state));
+  if (!target) return { kind: 'vent' };
+  if (comp.heat + config.aimedHeat <= comp.heatMax)
+    return { kind: 'shoot', shot: 'aimed', targetId: target.id };
+  if (comp.heat + config.snapHeat <= comp.heatMax)
+    return { kind: 'shoot', shot: 'snap', targetId: target.id };
+  return { kind: 'vent' };
 }
 
 function upkeep(state: GroundState, config: GroundConfig): void {
@@ -268,8 +321,11 @@ export function groundReduce(
     log.push('You call for a ceasefire — they answer with fire.');
   }
 
-  // Decide foe actions from the TURN-START state (simultaneous with the captain).
+  // Decide foe AND companion actions from the TURN-START state (simultaneous
+  // with the captain) — nobody reacts to what lands this same turn.
   const foePlans = aliveFoes(next).map((f) => ({ f, plan: foeAction(f, next, config) }));
+  const comp = companion(next);
+  const compPlan = comp && comp.down === null ? companionAction(comp, next, config) : null;
 
   // Captain acts.
   switch (action.type) {
@@ -334,6 +390,20 @@ export function groundReduce(
 
   // Foes act on their pre-decided plans (simultaneous — a downed foe this turn
   // still gets the shot it committed to at turn start).
+  // The companion executes their pre-decided plan first (RNG order is fixed
+  // purely for deterministic replay — plans were already locked).
+  if (comp && compPlan) {
+    if (compPlan.kind === 'vent') {
+      comp.heat = 0;
+      log.push(`${comp.name} vents a glowing blaster.`);
+    } else if (compPlan.kind === 'move') {
+      comp.zoneId = compPlan.zoneId;
+      log.push(`${comp.name} moves up.`);
+    } else {
+      const target = next.fighters.find((t) => t.id === compPlan.targetId);
+      if (target) resolveShot(comp, target, compPlan.shot, true, next, config, rng, log);
+    }
+  }
   for (const { f, plan } of foePlans) {
     if (plan.kind === 'vent') {
       f.heat = 0;
@@ -342,7 +412,8 @@ export function groundReduce(
       f.zoneId = plan.zoneId;
       log.push(`${f.name} falls back to cover.`);
     } else {
-      resolveShot(f, cap, plan.shot, true, next, config, rng, log);
+      const target = next.fighters.find((t) => t.id === plan.targetId) ?? cap;
+      resolveShot(f, target, plan.shot, true, next, config, rng, log);
     }
   }
 
