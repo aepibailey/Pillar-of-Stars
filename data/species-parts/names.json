@@ -1,0 +1,6 @@
+{
+  "_note": "Syllable pools for procedural species names (§8). name = prefix + middle? + suffix; generator guarantees uniqueness within a run.",
+  "prefixes": ["Vre", "Kor", "Ash", "Thel", "Mur", "Ix", "Sol", "Dra", "Ny", "Ghal", "Ru", "Ze"],
+  "middles": ["nn", "th", "ka", "ri", "vo", "sh", "gr", "lu", "", "", "", ""],
+  "suffixes": ["eth", "ari", "ox", "un", "ida", "aar", "esh", "ykk", "ombe", "il"]
+}

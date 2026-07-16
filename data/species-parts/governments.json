@@ -1,0 +1,13 @@
+{
+  "_note": "Species government pool (§8). `styleNote` colors event text and station inventories later (M5).",
+  "governments": [
+    { "id": "hive", "name": "Hive", "adjective": "hive-minded", "styleNote": "one will, many bodies; no individual bargaining" },
+    { "id": "theocracy", "name": "Theocracy", "adjective": "theocratic", "styleNote": "doctrine gates everything; blasphemy is expensive" },
+    { "id": "merchant-league", "name": "Merchant League", "adjective": "mercantile", "styleNote": "everything is for sale, including grudges" },
+    { "id": "junta", "name": "Junta", "adjective": "militarist", "styleNote": "rank is law; strength is the only credential" },
+    { "id": "anarchic-clans", "name": "Anarchic Clans", "adjective": "clan-riven", "styleNote": "no central authority; every deal is local" },
+    { "id": "ai-custodian", "name": "AI Custodianship", "adjective": "custodial", "styleNote": "a machine steward optimizes; citizens comply" },
+    { "id": "gerontocracy", "name": "Gerontocracy", "adjective": "elder-ruled", "styleNote": "the old decide; patience is currency" },
+    { "id": "syndicate", "name": "Syndicate", "adjective": "syndicated", "styleNote": "organized crime grown into a state" }
+  ]
+}

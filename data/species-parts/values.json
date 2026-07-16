@@ -1,0 +1,15 @@
+{
+  "_note": "Cultural value pool (§8) — 2-3 per species. `eventNote` is the hook event logic keys off (Phase 2 authors events against these ids).",
+  "values": [
+    { "id": "honor-debt", "name": "Honor-Debt", "eventNote": "remembers rescues and betrayals for the whole run" },
+    { "id": "knowledge-hoarding", "name": "Knowledge-Hoarding", "eventNote": "pays for secrets, never shares its own" },
+    { "id": "ancestor-worship", "name": "Ancestor Worship", "eventNote": "graves and relics are sacred; disturb them at your peril" },
+    { "id": "ritual-combat", "name": "Ritual Combat", "eventNote": "disputes settle by duel; produces Duelist recruits" },
+    { "id": "radical-hospitality", "name": "Radical Hospitality", "eventNote": "guests are sacred — abusing hospitality is unforgivable" },
+    { "id": "purity-taboo", "name": "Purity Taboos", "eventNote": "cybernetics and relic tech offend; scars are read as corruption" },
+    { "id": "oath-binding", "name": "Oath-Binding", "eventNote": "spoken promises are contracts; breaking one is exile-worthy" },
+    { "id": "trophy-taking", "name": "Trophy-Taking", "eventNote": "respect is earned in visible kills; weakness invites raids" },
+    { "id": "consensus-seeking", "name": "Consensus-Seeking", "eventNote": "decisions take time; patience opens doors force cannot" },
+    { "id": "debt-of-water", "name": "Debt-of-Water", "eventNote": "sharing scarce supplies creates kinship bonds" }
+  ]
+}

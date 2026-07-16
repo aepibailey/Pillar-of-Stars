@@ -1,0 +1,53 @@
+{
+  "_note": "Species morphology pool (§8). `sensorReading` is the pre-contact sensor blurb used by the first-contact flow — what your instruments see before you can talk to them.",
+  "morphologies": [
+    {
+      "id": "avian",
+      "name": "Avian",
+      "adjective": "avian",
+      "sensorReading": "Hollow-boned lifesigns, high metabolic burn. Their ships ride thermals that do not exist — flocking patterns in hard vacuum."
+    },
+    {
+      "id": "fungal",
+      "name": "Fungal Collective",
+      "adjective": "fungal",
+      "sensorReading": "One lifesign, or ten thousand — the sensors cannot decide. Spore density in the hull atmosphere is off every chart you have."
+    },
+    {
+      "id": "machine",
+      "name": "Machine",
+      "adjective": "machine",
+      "sensorReading": "No biology at all. Clock-regular power signatures, and a comms band that sounds like arithmetic arguing with itself."
+    },
+    {
+      "id": "gaseous",
+      "name": "Gaseous",
+      "adjective": "gaseous",
+      "sensorReading": "Pressure vessels where crew quarters should be. The lifesigns diffuse and reform — beings of weather, not meat."
+    },
+    {
+      "id": "chitinous",
+      "name": "Chitinous",
+      "adjective": "chitinous",
+      "sensorReading": "Dense keratin returns off every surface. Their hull plating and their bodies read as the same material."
+    },
+    {
+      "id": "energy",
+      "name": "Energy-Being",
+      "adjective": "luminous",
+      "sensorReading": "The lifesigns ARE the power grid. Your instruments cannot tell the crew from the reactor, and neither can you."
+    },
+    {
+      "id": "uplift",
+      "name": "Uplifted Fauna",
+      "adjective": "uplifted",
+      "sensorReading": "Familiar mammalian biology wearing unfamiliar cybernetics. Something raised these creatures up — recently, and in a hurry."
+    },
+    {
+      "id": "silicate",
+      "name": "Silicate",
+      "adjective": "crystalline",
+      "sensorReading": "Slow, mineral lifesigns — pulses minutes apart. They think in geological time and their ships are grown, not built."
+    }
+  ]
+}
