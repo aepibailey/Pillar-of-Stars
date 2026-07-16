@@ -1,0 +1,70 @@
+{
+  "_note": "EXPLICIT map of character art keys → actual on-disk filenames. Filenames are NOT consistently cased or located (note the accidental double-nested sprite path — mapped verbatim on purpose); NEVER construct art paths by string concatenation — resolve through this manifest (src/ui/art.ts). A missing direction (e.g. alien1-male has no Left sprite on disk) falls back to 'front', a missing key falls back to fallbackKey.",
+  "spriteRoot": "assets/sprites/characters/assets/assets/sprites/characters",
+  "portraitRoot": "assets/portraits/characters",
+  "fallbackKey": "main-male",
+  "characters": {
+    "main-male": {
+      "sprites": {
+        "front": "Main Character Male Front.png",
+        "back": "Main Character Male Back.png",
+        "left": "Main Character Male Left.png",
+        "right": "Main Character Male Right.png"
+      },
+      "portrait": "Main Character Male Portrait.png"
+    },
+    "main-female": {
+      "sprites": {
+        "front": "Main Character Female Front.png",
+        "back": "Main Character Female Back.png",
+        "left": "Main Character Female Left.png",
+        "right": "Main Character Female Right.png"
+      },
+      "portrait": "Main Character Female Portrait.png"
+    },
+    "alien1-male": {
+      "sprites": {
+        "front": "Alien 1 Male Front.png",
+        "back": "Alien 1 Male Back.png",
+        "right": "Alien 1 Male Right.png"
+      },
+      "portrait": "Alien 1 Male Portrait.png"
+    },
+    "alien1-female": {
+      "sprites": {
+        "front": "Alien 1 Female Front.png",
+        "back": "Alien 1 Female Back.png",
+        "left": "Alien 1 Female Left.png",
+        "right": "Alien 1 Female Right.png"
+      },
+      "portrait": "Alien 1 Female Portrait.png"
+    },
+    "alien1-male-mercenary": {
+      "sprites": {
+        "front": "Alien 1 Male Mercenary Front.png",
+        "back": "Alien 1 Male Mercenary Back.png",
+        "left": "Alien 1 Male Mercenary Left.png",
+        "right": "Alien 1 Male Mercenary Right.png"
+      },
+      "portrait": "Alien 1 Male Mercenary Portrait.png"
+    },
+    "human-female-longshot": {
+      "sprites": {
+        "front": "Human Female Longshot Front.png",
+        "back": "Human Female Longshot Back.png",
+        "left": "Human Female Longshot Left.png",
+        "right": "Human Female Longshot Right.png"
+      },
+      "portrait": "Human Female Longshot Portrait.png"
+    },
+    "human-male-debtor": {
+      "sprites": {
+        "front": "Human Male Debtor Front.png",
+        "back": "Human Male Debtor Back.png",
+        "left": "Human Male Debtor Left.png",
+        "right": "Human Male Debtor Right.png"
+      },
+      "portrait": "Human Male Debtor Portrait.png"
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "_note": "The 9 recruitment archetypes (§6.1) — ARCHITECTURE ONLY (M4 Phase 1). skills/traits/agendas are deliberately empty; Phase 2 authors the content. `downside` is the §6.1 catch's resource type (scrap | morale | reputation | combat-risk | narrative-risk | time | meta-knowledge). `artKey` maps into character-art-manifest.json; null = fallback art until generated.",
+  "archetypes": [
+    {
+      "id": "mercenary",
+      "name": "The Mercenary",
+      "vector": "Pay their price in scrap (steep)",
+      "catch": "Loyalty is rented. May demand raises, or walk at a rich port.",
+      "downside": "scrap",
+      "artKey": "alien1-male-mercenary",
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "duelist",
+      "name": "The Duelist",
+      "vector": "Beat them in a blaster fight or ritual combat — they join out of respect",
+      "catch": "Species with ritual-combat values produce these often. Losing hurts.",
+      "downside": "combat-risk",
+      "artKey": null,
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "wide-eyed-adventurer",
+      "name": "The Wide-Eyed Adventurer",
+      "vector": "Just ask. They're thrilled",
+      "catch": "Naive: falls for scams and traps in events until they grow up mid-run.",
+      "downside": "narrative-risk",
+      "artKey": null,
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "long-shot",
+      "name": "The Long Shot",
+      "vector": "Legendary specialist, near-impossible ask (0-5% base)",
+      "catch": "Convincible only via rare event chains. The codex logs how each one CAN be won.",
+      "downside": "meta-knowledge",
+      "artKey": "human-female-longshot",
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "debtor",
+      "name": "The Debtor",
+      "vector": "Buy out their indenture from a merchant league or crime boss",
+      "catch": "Their old owner may come collecting anyway.",
+      "downside": "narrative-risk",
+      "artKey": "human-male-debtor",
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "stowaway",
+      "name": "The Stowaway",
+      "vector": "Found hiding in your cargo hold three jumps after a station visit",
+      "catch": "Free crew! But WHY are they hiding, and who's chasing them?",
+      "downside": "narrative-risk",
+      "artKey": null,
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "defector",
+      "name": "The Defector",
+      "vector": "Surrenders during a boarding action or begs asylum mid-battle",
+      "catch": "Their species now dislikes you; their enemies warm up.",
+      "downside": "reputation",
+      "artKey": null,
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "salvage",
+      "name": "The Salvage",
+      "vector": "A damaged machine-being or cryopod survivor found on a derelict",
+      "catch": "Needs repair/revival investment first. May remember things about the precursors.",
+      "downside": "time",
+      "artKey": null,
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    },
+    {
+      "id": "prisoner",
+      "name": "The Prisoner",
+      "vector": "Freed from a pirate hold or a hostile ship you boarded",
+      "catch": "Grateful — or a plant. Small chance of a sleeper agenda.",
+      "downside": "narrative-risk",
+      "artKey": null,
+      "skills": [],
+      "traits": [],
+      "agendas": []
+    }
+  ]
+}

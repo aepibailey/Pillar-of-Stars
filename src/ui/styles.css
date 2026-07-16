@@ -607,3 +607,14 @@ button .sub {
   color: var(--accent);
   background: #10203a;
 }
+
+/* ---------- Succession (§6.4) ---------- */
+.succ-portrait {
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  margin: 0 auto 10px;
+}

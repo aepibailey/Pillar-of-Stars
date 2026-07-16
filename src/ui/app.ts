@@ -30,6 +30,7 @@ import {
 import type { Store } from '../engine/store';
 import type { RunState, WakeApproach } from '../engine/types';
 import { aliveFoes, captain as groundCaptain, parleyChance } from '../ground/engine';
+import { founderArtKey, portraitUrl } from './art';
 import type { FireMode, GroundAction, GroundState } from '../ground/types';
 import { systemsInCell } from '../galaxy/waypoint';
 import { drawMap, type MapGeometry } from '../render/mapRenderer';
@@ -1003,6 +1004,11 @@ export class App {
     overlay.hidden = false;
     const fallen = state.characters.find((c) => c.id === state.captainId);
     const candidates = successionCandidates(state);
+    // Portraits resolve ONLY through the art manifest (inconsistent filenames).
+    const fallenPortrait = fallen?.isFounder ? portraitUrl(founderArtKey(fallen.gender)) : null;
+    const portrait = fallenPortrait
+      ? `<img class="succ-portrait" src="${fallenPortrait}" alt="${fallen?.name ?? 'The captain'}">`
+      : '';
     const buttons = candidates
       .map(
         (c) =>
@@ -1014,6 +1020,7 @@ export class App {
     overlay.innerHTML = `
       <div class="sheet">
         <h1>THE CAPTAIN FALLS</h1>
+        ${portrait}
         <p>${fallen?.name ?? 'The captain'} is gone. Nothing undoes it. But the ship still holds air, and someone is still breathing aboard — the journey does not have to end here.</p>
         <p class="dim">Succession is survival, not a respawn: morale craters, doors close, the Wake surges — and everything ${fallen?.name ?? 'they'} was leaves the game with them.${state.ascendLocked ? ' With a founder gone, the road to Ascension is closed for good.' : ''}</p>
         ${buttons}
