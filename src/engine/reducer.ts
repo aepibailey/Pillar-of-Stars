@@ -22,6 +22,7 @@ import type { EventDef, EventEffects } from '../events/types';
 import { getSector } from '../galaxy/generate';
 import { nearestStationSystemId } from '../galaxy/search';
 import type { Sector } from '../galaxy/types';
+import { grantXp, type GrowthConfig, type GrowthHistory } from '../crew/growth';
 import { groundReduce, startGround } from '../ground/engine';
 import type { GroundAction, GroundConfig } from '../ground/types';
 import { generateSpecies } from '../species/generate';
@@ -90,6 +91,8 @@ export interface Deps {
   founders: FoundersDef;
   /** Species component pools (§8). */
   speciesParts: SpeciesParts;
+  /** XP/veterancy tuning (§6.05). */
+  growth: GrowthConfig;
 }
 
 /** Build a fresh player ship (§5) from the data-driven class definition. */
@@ -532,6 +535,24 @@ export function successionCandidates(state: RunState): Character[] {
   return state.characters.filter((c) => c.alive && c.id !== state.captainId);
 }
 
+/**
+ * Award XP to every living participant (§6.05 "XP from doing" — ship fights,
+ * boardings, first contacts, discoveries, quest resolutions). Level-ups and
+ * milestone trait rolls draw on the events RNG stream so growth is exactly
+ * deterministic and save-stable. Strictly in-run: NEW_RUN builds fresh people.
+ */
+function awardXp(state: RunState, deps: Deps, amount: number): void {
+  if (amount <= 0) return;
+  const history: GrowthHistory = {
+    boarding: !!(state.flags.boardedMassacre || state.flags.tookPrisoners || state.flags.alliedBoarding),
+    'ship-combat': state.stats.combats > 0,
+    contact: state.contactedSpeciesIds.length > 0,
+  };
+  const rng = new Rng(state.rngState.events);
+  for (const ch of state.characters) grantXp(ch, amount, deps.growth, history, rng);
+  state.rngState.events = rng.getState();
+}
+
 /** Apply a resolved boarding back to the run (§7.3 paths), loot scaled by band (§7.4). */
 function applyGroundResult(state: RunState, deps: Deps): void {
   const g = state.ground;
@@ -588,6 +609,10 @@ function applyGroundResult(state: RunState, deps: Deps): void {
     state.intel += loot.intel;
     state.flags.alliedBoarding = true;
   }
+  if (g.outcome !== 'withdrawn') {
+    // A resolved boarding — by blood, stun, or words — is experience (§6.05).
+    awardXp(state, deps, deps.growth.awards.boardingResolved);
+  }
   // 'withdrawn' → left the hull adrift, no reward.
   state.ground = null;
   state.phase = 'map';
@@ -595,7 +620,8 @@ function applyGroundResult(state: RunState, deps: Deps): void {
 }
 
 /** Apply a resolved fight back to the run: writeback ship, salvage, or death. */
-function applyCombatResult(state: RunState, config: GameConfig): void {
+function applyCombatResult(state: RunState, deps: Deps): void {
+  const config = deps.config;
   const c = state.combat;
   if (!c || c.outcome === 'ongoing') return;
 
@@ -612,6 +638,7 @@ function applyCombatResult(state: RunState, config: GameConfig): void {
   if (c.outcome === 'won') {
     state.scrap += c.salvageScrap;
     state.fuel += c.salvageFuel;
+    awardXp(state, deps, deps.growth.awards.shipFightWon); // §6.05
   } else if (c.outcome === 'surrendered') {
     // Surrender is meant to hurt (playtest patch): they strip the hold bare and
     // siphon half your fuel before letting you limp away.
@@ -695,6 +722,9 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       // An intra-system exploration jump: costs fuel and nudges the hunt.
       next.fuel = Math.max(0, next.fuel - cost);
       next.exploredNodeIds.push(node.id);
+      // Every survey is a discovery (§6.05). Quest-resolution XP hooks in when
+      // quests exist (M-later); the award id is already in data/growth.json.
+      awardXp(next, deps, deps.growth.awards.discovery);
 
       advanceWakeInto(next, config.wakeAdvancePerExplore);
       // The hunt arriving mid-survey is a forced §4 encounter, not a death —
@@ -867,7 +897,7 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
       if (next.phase !== 'combat' || !next.combat || next.combat.outcome === 'ongoing') {
         return state;
       }
-      applyCombatResult(next, config);
+      applyCombatResult(next, deps);
       return next;
     }
 
@@ -954,6 +984,7 @@ export function reduce(state: RunState, action: Action, deps: Deps): RunState {
         action.stance === 'peaceful' ? fc.peacefulStanding : action.stance === 'trade' ? 1 : 0;
       next.speciesStanding[c.speciesId] = (next.speciesStanding[c.speciesId] ?? 0) + delta;
       recordContact(next, deps, c.speciesId);
+      awardXp(next, deps, deps.growth.awards.firstContact); // §6.05
       const sp = runSpecies(next, deps).find((s) => s.id === c.speciesId);
       const text =
         action.stance === 'peaceful'

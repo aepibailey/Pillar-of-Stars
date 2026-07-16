@@ -3,6 +3,7 @@ import enemiesJson from '../data/enemies.json';
 import eventsJson from '../data/events/core.json';
 import foundersJson from '../data/founders.json';
 import groundJson from '../data/ground.json';
+import growthJson from '../data/growth.json';
 import introJson from '../data/intro.json';
 import namesWakeJson from '../data/names-wake.json';
 import shipPlayerJson from '../data/ship-player.json';
@@ -16,6 +17,7 @@ import tutorialGroundJson from '../data/tutorial-ground.json';
 import weaponsJson from '../data/weapons.json';
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from './combat/types';
 import type { GroundConfig } from './ground/types';
+import type { GrowthConfig } from './crew/growth';
 import type { FoundersDef, ThreatRewards } from './engine/types';
 import type { SpeciesParts } from './species/types';
 import { buildPlayerShip, createRun, type Deps } from './engine/reducer';
@@ -44,6 +46,7 @@ const playerDef = shipPlayerJson as unknown as PlayerShipDef;
 const wakeShipNames = (namesWakeJson as { wakeShips: string[] }).wakeShips;
 const ground = (groundJson as { config: GroundConfig }).config;
 const threatRewards = threatBandsJson as ThreatRewards;
+const growth = growthJson as unknown as GrowthConfig;
 const founders = foundersJson as FoundersDef;
 const speciesParts: SpeciesParts = {
   morphologies: (morphologiesJson as { morphologies: SpeciesParts['morphologies'] }).morphologies,
@@ -62,6 +65,7 @@ const deps: Deps = {
   threatRewards,
   founders,
   speciesParts,
+  growth,
 };
 const introFrames = (introJson as { frames: IntroFrame[] }).frames;
 const tutorialCombat = (tutorialCombatJson as { steps: TutorialStep[] }).steps;

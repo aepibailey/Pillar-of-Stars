@@ -1,0 +1,45 @@
+{
+  "_note": "Growth tuning (§6.05). XP awards per deed; flat xpPerLevel cost (each level costs this much again); milestone levels roll a SECOND trait from the pool below, filtered by what the character has actually lived through (requires). Trait pool here is a seed set for the roll logic — Phase 2 expands it. Growth is strictly in-run.",
+  "xpPerLevel": 100,
+  "milestoneLevels": [3, 6, 9],
+  "tierThresholds": { "SEASONED": 3, "VETERAN": 6, "ELITE": 9 },
+  "awards": {
+    "shipFightWon": 25,
+    "boardingResolved": 30,
+    "firstContact": 20,
+    "discovery": 6,
+    "questResolved": 40
+  },
+  "milestoneTraitPool": [
+    {
+      "id": "boarding-veteran",
+      "name": "Boarding Veteran",
+      "note": "+accuracy in corridor fights",
+      "requires": "boarding"
+    },
+    {
+      "id": "void-duelist",
+      "name": "Void Duelist",
+      "note": "+evasion when outgunned in ship combat",
+      "requires": "ship-combat"
+    },
+    {
+      "id": "first-speaker",
+      "name": "First Speaker",
+      "note": "+decode odds; species remember courtesy",
+      "requires": "contact"
+    },
+    {
+      "id": "survivor",
+      "name": "Survivor",
+      "note": "+1 hp per level retroactively; harder to kill",
+      "requires": null
+    },
+    {
+      "id": "steady-under-fire",
+      "name": "Steady Under Fire",
+      "note": "immune to suppression accuracy penalties",
+      "requires": null
+    }
+  ]
+}

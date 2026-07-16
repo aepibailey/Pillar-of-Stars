@@ -1,0 +1,17 @@
+{
+  "_note": "Scar data model (§6.05) — permanent marks from serious injury. DATA MODEL ONLY in M4 Phase 1: the schema is the contract (id, name, penalty/bonus hooks the systems read); the infliction logic and full content list come with the injury system. Two seed entries prove the shape.",
+  "scars": [
+    {
+      "id": "stiff-arm",
+      "name": "Stiff Arm",
+      "penalty": { "domain": "aim", "amount": -1 },
+      "bonus": { "domain": "intimidation", "amount": 1 }
+    },
+    {
+      "id": "cybernetic-eye",
+      "name": "Cybernetic Eye",
+      "penalty": { "domain": "purity-taboo-reaction", "amount": -1 },
+      "bonus": { "domain": "sensors", "amount": 1 }
+    }
+  ]
+}

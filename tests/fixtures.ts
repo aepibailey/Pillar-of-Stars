@@ -7,6 +7,7 @@ import weaponsJson from '../data/weapons.json';
 import wakeNamesJson from '../data/names-wake.json';
 import groundJson from '../data/ground.json';
 import threatBandsJson from '../data/threat-bands.json';
+import growthJson from '../data/growth.json';
 import foundersJson from '../data/founders.json';
 import morphologiesJson from '../data/species-parts/morphologies.json';
 import governmentsJson from '../data/species-parts/governments.json';
@@ -23,6 +24,7 @@ import type {
 import type { EnemyArchetype, PlayerShipDef, WeaponDef } from '../src/combat/types';
 import type { GroundConfig } from '../src/ground/types';
 import type { SpeciesParts } from '../src/species/types';
+import type { GrowthConfig } from '../src/crew/growth';
 import type { EventDef } from '../src/events/types';
 
 export const config = configJson as GameConfig;
@@ -33,6 +35,7 @@ export const playerDef = shipPlayerJson as unknown as PlayerShipDef;
 export const wakeShipNames = (wakeNamesJson as { wakeShips: string[] }).wakeShips;
 export const ground = (groundJson as { config: GroundConfig }).config;
 export const threatRewards = threatBandsJson as ThreatRewards;
+export const growth = growthJson as unknown as GrowthConfig;
 export const founders = foundersJson as FoundersDef;
 export const speciesParts: SpeciesParts = {
   morphologies: (morphologiesJson as { morphologies: SpeciesParts['morphologies'] }).morphologies,
@@ -52,6 +55,7 @@ export const deps: Deps = {
   threatRewards,
   founders,
   speciesParts,
+  growth,
 };
 
 export function makeDeps(overrides: Partial<Deps> = {}): Deps {
