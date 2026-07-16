@@ -39,6 +39,12 @@ const config: GameConfig = {
   // ?contact=1: dev override — every exploration triggers first contact (§8).
   ...(query.get('contact') === '1' ? { debugContact: true } : {}),
 };
+// The combat overrides mean "I'm testing fights" — silence the random first-
+// contact roll so it can't pre-empt the forced encounter (contact stays fully
+// reachable via ?contact=1). Dev-only: no query param, no change.
+if (query.get('hostile') === '1' || query.get('board') === '1') {
+  config.firstContact = { ...config.firstContact, chance: 0 };
+}
 const events = eventsJson as unknown as EventDef[];
 const weapons = weaponsJson as WeaponDef[];
 const enemies = enemiesJson as unknown as EnemyArchetype[];

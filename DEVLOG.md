@@ -489,3 +489,36 @@ New `data/threat-bands.json` `rewardsByBand` (tunable): FUEL 2/4/6/8, INTEL 1/2/
 **On the turn-resolution architecture question (M2 open item):** this is the fix at the architecture level the designer asked for. The insight: any state update that moves the Wake front must funnel through one advance-and-queue path, and the encounter must resolve as the next thing presented to the player — never a bypass. Combat itself stays simultaneous (unchanged); this was purely the map-layer advance/​resolve ordering, now unified. No per-trigger patching remains — `deathCause = 'wake'` is set in exactly one place (losing the fight).
 
 **Verification:** 191 tests (updated the two that encoded the old silent-death behavior — probe wakeAdvance-catch and stranded-drift-catch now assert the §4 encounter; added: EXPLORE-advance catch → fight, and losing the forced Wake fight → `deathCause 'wake'`). Build/tsc/lint clean. Every `advanceWake` site now routes through `advanceWakeInto`/`resolvePendingWake`.
+
+---
+
+## Session 17 — 2026-07-16 · M4 "Someone to Meet" Phase 1 — architecture (all six tasks)
+
+Built on design doc **v0.7** (founding couple confirmed; doc landed mid-session and was verified against the designer's rulings before coding). Content authoring (recruit skill/trait tables, the 40 events) deliberately untouched — Phase 2. **SCHEMA_VERSION 9 → 10.**
+
+### 1–2. Species generator + disposition matrix (§8)
+`/data/species-parts/` (8 morphologies each carrying a first-contact `sensorReading` blurb, 8 governments, 10 values with event hooks, name syllables). `generateSpecies(seed, parts)` → 4–6 species, distinct morphology/government/name, 2–3 values each; `generateDispositions` → wars/alliances/grudges with a guaranteed ≥1 war + ≥1 alliance. Both PURE from the run seed — nothing generated is stored; only player mutations live in state. Read API: `pairKey`/`getRelation` (+ override layer).
+
+### 3. First contact (§8)
+Exploration can open contact with an unmet species (`?contact=1` forces; combat overrides silence the random roll so `?hostile/?board` stay deterministic). Flow: **sensors** (morphology blurb) → **decode** (base + sensors + comms + best crew xeno-linguist; finite attempts; save-resumable cursor) → **dialogue** (peace/trade/guarded → standing) → done. **Botch = lasting hostility** (standing + per-species flag). Success logs species **components** to the codex (cross-run-stable ids). Verified on-screen at 390×844.
+
+### 4. Succession (§6.4/§9.4 v0.7) — the core of the batch
+- `createRun` makes the **founding couple** (data/founders.json until the creator UI): captain + spouse, spouse pre-filling the §6.3 companion slot; both `isFounder` + `desertionImmune` (the future morale system's contract).
+- Companion now **fights in boardings** (auto-acting crew-side fighter; foes split fire) — making the §6.4 edge case real: captain falls + companion also dead (or boarded alone) → journey ends; companion survives → **phase 'succession'**, the CHOICE (never automatic): SUCCEED_AS promotes a survivor to captain in full (runId persists; morale/reputation/agenda hooks set; **Wake surges exactly +1 jump**, which can itself force a §4 fight mid-handover) — or begin again.
+- **ASCEND lock is symmetric + permanent**: `killCharacter` sets `ascendLocked` when EITHER founder dies, any cause, any time. Spouse-death path: no succession, heavier-than-normal morale flag, slot reopens, vengeance beat seeded. Both founders gone + no crew → the existing forced restart.
+- **Codex is the only begin-again carry** (plus the ironman preference — a setting, not progress). Ironman (`?ironman=1`) makes any captain death final.
+
+### 5. Crew/recruitment model (§6.1/§6.3) — architecture only
+9 archetypes as schema (vector/catch/**downside resource type**/artKey; skills/traits/agendas EMPTY for Phase 2). `MAX_CREW = 4` slot rules (`canRecruit`/`addRecruit`/`setCompanion`). **Character-art manifest**: explicit map of art keys → actual on-disk filenames (including the accidental double-nested sprite directory, mapped verbatim, and the missing `Alien 1 Male Left.png`); `src/ui/art.ts` resolves ONLY through it (import.meta.glob → served URLs) with key→fallback→front chains. A CI test asserts **every referenced file exists on disk** so future art drops that rename anything fail loudly. Succession screen shows the fallen founder's portrait through this pipeline.
+
+### 6. XP/veterancy (§6.05)
+`data/growth.json` + `src/crew/growth.ts`: flat per-level cost, level-ups bank skill points, milestone levels [3,6,9] roll a second trait **gated by lived history** (Boarding Veteran needs boardings), tiers GREEN→SEASONED→VETERAN→ELITE. Awards wired: ship-fight win, boarding resolution, first contact, node discovery (quest award parked in data). Deterministic via the events RNG stream. Scars: data model + 2 seed entries (infliction logic = injury system, later). Strictly in-run.
+
+### Verification
+**243 tests** (58 new this session across species/disposition/founders/contact/succession/crew/growth). Build/tsc/lint clean; all five smokes green at 390×844; contact + succession screens verified visually (portrait pipeline works).
+
+### What's next / what I need from you
+- **Phase 2 (lighter model): content authoring** — recruit archetype skill/trait/agenda tables, the 40 events, founder backgrounds beyond the two defaults.
+- **Character-creator UI** is unbuilt: founders currently come from data/founders.json defaults (Rhea/Kael Voss). Needs a design pass whenever you want it.
+- **Systems the hooks await**: morale/desertion (reads `desertionImmune`, `moraleHitHeavy`…), reputation, agendas-as-events, quests (XP award parked), injuries→scars infliction, the ASCEND/RETRIBUTION endgame itself reads `ascendLocked`.
+- **Flagged, not fixed** (per instructions): sprite art lives in an accidentally double-nested directory — manifest maps it verbatim; if your art tool re-exports flat someday, only the manifest changes.
